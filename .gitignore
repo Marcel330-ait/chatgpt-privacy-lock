@@ -1,0 +1,9 @@
+# Local Chrome and editor artifacts
+.DS_Store
+Thumbs.db
+*.crx
+*.zip
+
+# Local notes and environment files
+.env
+.idea/

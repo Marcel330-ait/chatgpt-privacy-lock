@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "ChatGPT Privacy Lock",
+  "version": "1.0.0",
+  "description": "Adds a privacy lock to ChatGPT sidebar history and navigation.",
+  "permissions": ["storage"],
+  "action": {
+    "default_title": "ChatGPT Privacy Lock",
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://chatgpt.com/*",
+        "https://chat.openai.com/*"
+      ],
+      "js": ["content.js"],
+      "css": ["styles.css"],
+      "run_at": "document_idle"
+    }
+  ]
+}
