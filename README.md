@@ -18,7 +18,8 @@
 | 切换页面或窗口失焦时自动重新锁定 | Re-locks when the page is hidden or the window loses focus |
 | PIN 使用 PBKDF2 + 随机 salt 存储 | Stores PIN with PBKDF2 + a random salt |
 | 错误 PIN 多次后进入短暂冷却 | Adds a short cooldown after repeated incorrect PIN attempts |
-| 中英双语 UI | Bilingual Chinese/English UI through Chrome i18n |
+| 可手动选择 Auto / 中文 / English | Lets users choose Auto / Chinese / English manually |
+| 可选择隐藏 Search、Library、Pinned、Projects、Chats | Lets users choose which sidebar areas to hide |
 
 ## 工作原理 / How it works
 
@@ -70,9 +71,13 @@ flowchart LR
    **English**: Enter a PIN with at least 4 characters.
 3. **中文**：开启 **侧边栏保护 / Sidebar protection**。<br>
    **English**: Turn on **Sidebar protection**.
-4. **中文**：点击 **保存设置 / Save settings**。<br>
+4. **中文**：选择语言：**Auto / 中文 / English**。<br>
+   **English**: Choose a language: **Auto / 中文 / English**.
+5. **中文**：勾选你想隐藏的侧边栏区域：Search chats、Library、Pinned chats、Projects、Previous chats。<br>
+   **English**: Select the sidebar areas you want to hide: Search chats, Library, Pinned chats, Projects, Previous chats.
+6. **中文**：点击 **保存设置 / Save settings**。<br>
    **English**: Click **Save settings**.
-5. **中文**：刷新 ChatGPT 页面，或在 `chrome://extensions` 里重载扩展后再刷新页面。<br>
+7. **中文**：刷新 ChatGPT 页面，或在 `chrome://extensions` 里重载扩展后再刷新页面。<br>
    **English**: Refresh ChatGPT, or reload the extension in `chrome://extensions` and then refresh the page.
 
 ## 日常使用 / Daily use
@@ -85,14 +90,16 @@ flowchart LR
   **English**: Click **Lock Now** in the popup to re-lock immediately.
 - **中文**：切走页面、切换标签页、窗口失焦，都会自动锁回去。<br>
   **English**: Switching tabs, hiding the page, or losing window focus re-locks the sidebar.
+- **中文**：如果你只想隐藏 Projects 或 Previous chats，可以在弹窗里取消其它区域。<br>
+  **English**: If you only want to hide Projects or Previous chats, uncheck the other areas in the popup.
 
 ## 文件结构 / Project structure
 
 | File | 中文说明 | English |
 | --- | --- | --- |
 | `manifest.json` | Manifest V3 配置、权限、图标和 ChatGPT 匹配范围 | MV3 config, permissions, icons, and ChatGPT match patterns |
-| `content.js` | 侧边栏识别、遮罩、点击拦截、PIN 验证、自动锁定 | Sidebar detection, masking, click interception, PIN verification, auto lock |
-| `popup.html` / `popup.js` | 扩展弹窗、PIN 设置、开关、倒计时状态、立即锁定 | Popup, PIN setup, toggle, countdown status, Lock Now |
+| `content.js` | 侧边栏识别、按区域遮罩、点击拦截、PIN 验证、自动锁定 | Sidebar detection, per-area masking, click interception, PIN verification, auto lock |
+| `popup.html` / `popup.js` | 扩展弹窗、PIN 设置、语言选择、隐藏范围、倒计时状态、立即锁定 | Popup, PIN setup, language picker, protected-area choices, countdown status, Lock Now |
 | `styles.css` | 遮罩、徽章、弹窗和弹窗 UI 样式 | Mask, badge, modal, and popup styles |
 | `_locales/` | 中英双语文案 | Chinese/English localization strings |
 | `PRIVACY_POLICY.md` | 隐私政策草案 | Privacy policy draft |

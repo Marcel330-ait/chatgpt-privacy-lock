@@ -1,5 +1,12 @@
 # Changelog / 更新日志
 
+## 1.2.0 — 2026-06-25
+
+- Added a manual language selector: Auto, Chinese, and English.
+- Added user-selectable protected areas: Search chats, Library, Pinned chats, Projects, and Previous chats.
+- Replaced the single large sidebar curtain with granular mask fragments so disabled areas can remain visible.
+- Updated README and store copy for the new customization controls.
+
 ## 1.1.0 — 2026-06-25
 
 - Added Chrome i18n support with English and Simplified Chinese UI.

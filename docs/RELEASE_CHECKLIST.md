@@ -7,6 +7,8 @@
 - [ ] Test `https://chat.openai.com/*`.
 - [ ] Confirm the current chat, composer, attachments, voice, and send button still work.
 - [ ] Confirm Search chats, Library, Pinned, Projects, and previous chats are masked when locked.
+- [ ] Confirm each protected-area checkbox only hides that selected area.
+- [ ] Confirm language selection works in Auto, Chinese, and English.
 - [ ] Confirm clicking a masked area opens the PIN modal.
 - [ ] Confirm correct PIN unlocks for 5 minutes.
 - [ ] Confirm incorrect PIN shows an error and repeated failures trigger cooldown.

@@ -9,7 +9,7 @@
   <body class="cpl-popup">
     <main>
       <header>
-        <div class="cpl-popup-lock" aria-hidden="true">🔒</div>
+        <div class="cpl-popup-lock" aria-hidden="true">&#128274;</div>
         <div>
           <h1 data-i18n="popupTitle">Privacy Lock</h1>
           <p data-i18n="popupSubtitle">Protect ChatGPT sidebar history.</p>
@@ -25,6 +25,26 @@
           <input id="enabled" type="checkbox" role="switch" />
           <span class="cpl-toggle" aria-hidden="true"></span>
         </label>
+
+        <label class="cpl-field-label" for="language">
+          <span data-i18n="languageLabel">Language</span>
+          <select id="language">
+            <option value="auto" data-i18n="languageAuto">Auto</option>
+            <option value="zh_CN" data-i18n="languageChinese">中文</option>
+            <option value="en" data-i18n="languageEnglish">English</option>
+          </select>
+          <small data-i18n="languageHelp">Auto follows Chrome's language.</small>
+        </label>
+
+        <fieldset class="cpl-area-fieldset">
+          <legend data-i18n="protectWhat">Hide these sidebar areas</legend>
+          <label><input type="checkbox" data-area="search" /> <span data-i18n="areaSearch">Search chats</span></label>
+          <label><input type="checkbox" data-area="library" /> <span data-i18n="areaLibrary">Library</span></label>
+          <label><input type="checkbox" data-area="pinned" /> <span data-i18n="areaPinned">Pinned chats</span></label>
+          <label><input type="checkbox" data-area="projects" /> <span data-i18n="areaProjects">Projects</span></label>
+          <label><input type="checkbox" data-area="chats" /> <span data-i18n="areaChats">Previous chats</span></label>
+          <small data-i18n="protectWhatHelp">New chat and the current conversation stay usable.</small>
+        </fieldset>
 
         <label class="cpl-field-label" for="pin">
           <span id="pin-label">Set a PIN</span>

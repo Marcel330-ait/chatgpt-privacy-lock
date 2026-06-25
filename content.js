@@ -9,12 +9,49 @@
   const MAX_FAILED_ATTEMPTS = 5;
   const COOLDOWN_MS = 30 * 1000;
 
-  const PROTECTED_TEXT = /\b(search(?: chats)?|chats?|history|pinned|projects?|library)\b/i;
+  const DEFAULT_AREAS = {
+    search: true,
+    library: true,
+    pinned: true,
+    projects: true,
+    chats: true
+  };
+
+  const TEXT = {
+    en: {
+      historyLockedBadge: "🔒 History locked",
+      sidebarItemLocked: "Locked",
+      pinModalTitle: "History locked",
+      pinModalDescription: "Enter your PIN to unlock sidebar history for 5 minutes.",
+      pinLabelShort: "PIN",
+      unlockForFiveMinutes: "Unlock for 5 minutes",
+      incorrectPin: "Incorrect PIN",
+      tooManyAttempts: "Too many attempts. Try again in $1 seconds.",
+      tryAgainInSeconds: "Try again in $1s.",
+      setPinFirst: "Set a PIN in the extension popup first.",
+      close: "Close"
+    },
+    zh_CN: {
+      historyLockedBadge: "🔒 历史已锁定",
+      sidebarItemLocked: "已锁定",
+      pinModalTitle: "历史已锁定",
+      pinModalDescription: "输入 PIN 后，侧边栏历史将解锁 5 分钟。",
+      pinLabelShort: "PIN",
+      unlockForFiveMinutes: "解锁 5 分钟",
+      incorrectPin: "PIN 错误",
+      tooManyAttempts: "尝试次数过多，请 $1 秒后再试。",
+      tryAgainInSeconds: "请 $1 秒后再试。",
+      setPinFirst: "请先在扩展弹窗里设置 PIN。",
+      close: "关闭"
+    }
+  };
+
   const PROTECTED_TEST_ID = /(conversation|history|project|library|search|pinned)/i;
-  const PROTECTED_PATH = /^\/(c|g)(\/|$)|^\/(projects?|library|search)(\/|$)/i;
 
   let settings = {
     enabled: false,
+    language: "auto",
+    protectedAreas: { ...DEFAULT_AREAS },
     pinHash: "",
     pinSalt: "",
     pinIterations: PIN_ITERATIONS,
@@ -28,20 +65,25 @@
   let refreshQueued = false;
   let modal;
   let badge;
-  let sidebarCurtain;
+  let maskLayer;
   let sidebarHost;
 
-  const msg = (name, substitutions, fallback) => {
-    try {
-      return chrome.i18n.getMessage(name, substitutions) || fallback || name;
-    } catch {
-      return fallback || name;
-    }
-  };
+  function currentLanguage() {
+    if (settings.language === "en" || settings.language === "zh_CN") return settings.language;
+    return chrome.i18n.getUILanguage?.().toLowerCase().startsWith("zh") ? "zh_CN" : "en";
+  }
+
+  function msg(name, substitutions = [], fallback = "") {
+    const language = currentLanguage();
+    const value = TEXT[language]?.[name] || TEXT.en[name] || fallback || name;
+    return substitutions.reduce((copy, item, index) => copy.replaceAll(`$${index + 1}`, item), value);
+  }
 
   const readSettings = () => new Promise((resolve) => {
     chrome.storage.local.get([
       "enabled",
+      "language",
+      "protectedAreas",
       "pinHash",
       "pinSalt",
       "pinIterations",
@@ -52,6 +94,8 @@
     ], (stored) => {
       settings = {
         enabled: Boolean(stored.enabled),
+        language: stored.language || "auto",
+        protectedAreas: { ...DEFAULT_AREAS, ...(stored.protectedAreas || {}) },
         pinHash: stored.pinHash || "",
         pinSalt: stored.pinSalt || "",
         pinIterations: Number(stored.pinIterations) || PIN_ITERATIONS,
@@ -77,6 +121,10 @@
     });
   }
 
+  function getText(element) {
+    return (element?.getAttribute?.("aria-label") || element?.innerText || element?.textContent || "").trim();
+  }
+
   function getSidebarHost() {
     const isSidebarShape = (element) => {
       if (element.closest('[role="dialog"]')) return false;
@@ -88,7 +136,7 @@
     };
 
     const hasSidebarLandmarks = (element) => {
-      const text = (element.innerText || element.textContent || "").toLowerCase();
+      const text = getText(element).toLowerCase();
       return ["new chat", "search chats", "pinned", "projects"]
         .filter((landmark) => text.includes(landmark)).length >= 2;
     };
@@ -100,7 +148,7 @@
     if (semanticHost) return semanticHost;
 
     const landmarkControls = [...document.querySelectorAll('a, button, [role="button"], [role="link"]')]
-      .filter((element) => /^(new chat|search chats)$/i.test((element.innerText || element.textContent || "").trim()));
+      .filter((element) => /^(new chat|search chats)$/i.test(getText(element)));
     let landmarkHost = null;
     for (const control of landmarkControls) {
       let ancestor = control.parentElement;
@@ -133,23 +181,59 @@
     return rect.width > 0 && rect.height > 0 && rect.left >= -2 && rect.right <= maxRight;
   }
 
-  function itemLooksProtected(element) {
-    if (!element || !isInSidebar(element)) return false;
-    if (element.matches('[data-cpl-badge], [data-cpl-modal], [data-cpl-modal] *')) return false;
+  function safePath(href) {
+    try {
+      return new URL(href || "", location.origin).pathname;
+    } catch {
+      return "";
+    }
+  }
 
-    const text = (element.getAttribute("aria-label") || element.textContent || "").trim();
+  function sectionCategoryFromPosition(element) {
+    const host = sidebarHost || getSidebarHost();
+    if (!host) return "";
+
+    const rowTop = element.getBoundingClientRect().top;
+    const headings = [...host.querySelectorAll("h1,h2,h3,h4,h5,h6,div,span,p")]
+      .map((candidate) => ({ element: candidate, text: getText(candidate), rect: candidate.getBoundingClientRect() }))
+      .filter(({ text, rect }) => /^(pinned|projects?|chats?|置顶|项目|聊天)$/i.test(text) && rect.height > 0 && rect.top <= rowTop + 2)
+      .sort((a, b) => b.rect.top - a.rect.top);
+
+    const heading = headings[0]?.text.toLowerCase() || "";
+    if (/pinned|置顶/.test(heading)) return "pinned";
+    if (/projects?|项目/.test(heading)) return "projects";
+    if (/chats?|聊天/.test(heading)) return "chats";
+    return "";
+  }
+
+  function protectedCategory(element) {
+    if (!element || !isInSidebar(element)) return "";
+    if (element.matches('[data-cpl-badge], [data-cpl-mask-layer], [data-cpl-mask-layer] *, [data-cpl-modal], [data-cpl-modal] *')) return "";
+
+    const text = getText(element);
+    const lowerText = text.toLowerCase();
     const href = element.getAttribute("href") || "";
+    const path = safePath(href);
     const testId = element.getAttribute("data-testid") || "";
 
-    if (/new chat|settings|explore gpts/i.test(text)) return false;
+    if (/new chat|settings|explore gpts/i.test(text)) return "";
+    if (/search chats|搜索/.test(lowerText) || /^\/search(\/|$)/i.test(path) || /search/i.test(testId)) return "search";
+    if (/library|资料库|库/.test(lowerText) || /^\/library(\/|$)/i.test(path) || /library/i.test(testId)) return "library";
+    if (/pinned|置顶/.test(lowerText) || /pinned/i.test(testId)) return "pinned";
+    if (/projects?|项目/.test(lowerText) || /^\/projects?(\/|$)/i.test(path) || /project/i.test(testId)) return "projects";
+    if (/history|chats?|聊天|历史/.test(lowerText) || /^\/c(\/|$)/i.test(path) || /(conversation|history)/i.test(testId)) return "chats";
 
-    if (PROTECTED_PATH.test(href) || PROTECTED_TEST_ID.test(testId)) return true;
-    if (PROTECTED_TEXT.test(text)) return true;
+    const sectionCategory = sectionCategoryFromPosition(element);
+    if (sectionCategory) return sectionCategory;
 
-    if (element.tagName === "A" && href) {
-      return !/^\/(auth|share|settings|gpts?)(\/|$)/i.test(new URL(href, location.origin).pathname);
-    }
-    return false;
+    if (element.tagName === "A" && href && !/^\/(auth|share|settings|gpts?)(\/|$)/i.test(path)) return "chats";
+    if (PROTECTED_TEST_ID.test(testId)) return "chats";
+    return "";
+  }
+
+  function itemLooksProtected(element) {
+    const category = protectedCategory(element);
+    return Boolean(category && settings.protectedAreas[category]);
   }
 
   function protectedItemFrom(target) {
@@ -170,9 +254,9 @@
       badge = document.createElement("div");
       badge.className = "cpl-sidebar-badge";
       badge.dataset.cplBadge = "true";
-      badge.textContent = msg("historyLockedBadge", undefined, "🔒 History locked");
       document.body.append(badge);
     }
+    badge.textContent = msg("historyLockedBadge");
 
     if (host) {
       const rect = host.getBoundingClientRect();
@@ -184,36 +268,49 @@
     }
   }
 
-  function setSidebarCurtain(host) {
-    if (!isLocked() || !host) {
-      sidebarCurtain?.remove();
-      sidebarCurtain = null;
-      return;
-    }
+  function clearMaskLayer() {
+    maskLayer?.remove();
+    maskLayer = null;
+  }
 
-    if (!sidebarCurtain) {
-      sidebarCurtain = document.createElement("div");
-      sidebarCurtain.className = "cpl-sidebar-curtain";
-      sidebarCurtain.dataset.cplCurtain = "true";
-      sidebarCurtain.innerHTML = `<span>${escapeHtml(msg("sidebarHistoryLocked", undefined, "🔒 Sidebar history locked"))}</span>`;
-      sidebarCurtain.addEventListener("click", (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        showPinModal();
-      });
-      document.body.append(sidebarCurtain);
-    }
+  function setMaskFragments() {
+    clearMaskLayer();
+    if (!isLocked() || !sidebarHost) return;
 
-    const hostRect = host.getBoundingClientRect();
-    const searchControl = [...host.querySelectorAll('a, button, [role="button"], [role="link"]')]
-      .find((element) => /search chats/i.test((element.innerText || element.textContent || "").trim()));
-    const searchRect = searchControl?.getBoundingClientRect();
-    const top = Math.max(hostRect.top, searchRect?.top ?? hostRect.top + 76);
-    const bottom = hostRect.bottom;
-    sidebarCurtain.style.left = `${hostRect.left}px`;
-    sidebarCurtain.style.top = `${top}px`;
-    sidebarCurtain.style.width = `${hostRect.width}px`;
-    sidebarCurtain.style.height = `${Math.max(0, bottom - top)}px`;
+    const protectedItems = [...document.querySelectorAll(".cpl-protected-item")]
+      .filter((item) => item.isConnected)
+      .map((item) => item.getBoundingClientRect())
+      .filter((rect) => rect.width > 8 && rect.height > 8);
+
+    if (!protectedItems.length) return;
+
+    maskLayer = document.createElement("div");
+    maskLayer.className = "cpl-mask-layer";
+    maskLayer.dataset.cplMaskLayer = "true";
+    maskLayer.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      showPinModal();
+    });
+
+    protectedItems.forEach((rect, index) => {
+      const fragment = document.createElement("button");
+      fragment.type = "button";
+      fragment.className = "cpl-mask-fragment";
+      fragment.style.left = `${rect.left}px`;
+      fragment.style.top = `${rect.top}px`;
+      fragment.style.width = `${rect.width}px`;
+      fragment.style.height = `${rect.height}px`;
+      fragment.setAttribute("aria-label", msg("pinModalTitle"));
+      if (index === 0) {
+        const label = document.createElement("span");
+        label.textContent = msg("sidebarItemLocked");
+        fragment.append(label);
+      }
+      maskLayer.append(fragment);
+    });
+
+    document.body.append(maskLayer);
   }
 
   function refreshProtection() {
@@ -221,6 +318,7 @@
     document.querySelectorAll(".cpl-protected-item").forEach((item) => {
       item.classList.remove("cpl-protected-item");
       item.removeAttribute("data-cpl-protected");
+      item.removeAttribute("data-cpl-category");
     });
 
     if (settings.enabled) {
@@ -228,16 +326,18 @@
         ? sidebarHost.querySelectorAll('a, button, [role="button"], [role="link"]')
         : document.querySelectorAll('a, button, [role="button"], [role="link"]');
       clickableItems.forEach((item) => {
-        if (itemLooksProtected(item)) {
+        const category = protectedCategory(item);
+        if (category && settings.protectedAreas[category]) {
           item.classList.add("cpl-protected-item");
           item.dataset.cplProtected = "true";
+          item.dataset.cplCategory = category;
         }
       });
     }
 
     document.documentElement.classList.toggle("cpl-history-is-locked", isLocked());
     setBadge(sidebarHost);
-    setSidebarCurtain(sidebarHost);
+    setMaskFragments();
     scheduleLockTimer();
   }
 
@@ -297,12 +397,7 @@
       ["deriveBits"]
     );
     const derivedBits = await crypto.subtle.deriveBits(
-      {
-        name: "PBKDF2",
-        salt: base64ToBytes(saltBase64),
-        iterations,
-        hash: "SHA-256"
-      },
+      { name: "PBKDF2", salt: base64ToBytes(saltBase64), iterations, hash: "SHA-256" },
       keyMaterial,
       256
     );
@@ -352,9 +447,9 @@
       settings.failedPinAttempts = 0;
       updates.failedPinAttempts = 0;
       updates.pinCooldownUntil = settings.pinCooldownUntil;
-      error.textContent = msg("tooManyAttempts", [String(cooldownSecondsLeft())], "Too many attempts. Try again in 30 seconds.");
+      error.textContent = msg("tooManyAttempts", [String(cooldownSecondsLeft())]);
     } else {
-      error.textContent = msg("incorrectPin", undefined, "Incorrect PIN");
+      error.textContent = msg("incorrectPin");
     }
 
     await chrome.storage.local.set(updates);
@@ -370,7 +465,7 @@
     }
 
     submitButton.disabled = true;
-    error.textContent = msg("tryAgainInSeconds", [String(seconds)], `Try again in ${seconds}s.`);
+    error.textContent = msg("tryAgainInSeconds", [String(seconds)]);
     return true;
   }
 
@@ -385,15 +480,15 @@
     modal.dataset.cplModal = "true";
     modal.innerHTML = `
       <section class="cpl-pin-modal" role="dialog" aria-modal="true" aria-labelledby="cpl-pin-title">
-        <button class="cpl-modal-close" type="button" aria-label="${escapeHtml(msg("close", undefined, "Close"))}">×</button>
+        <button class="cpl-modal-close" type="button" aria-label="${escapeHtml(msg("close"))}">×</button>
         <div class="cpl-modal-icon" aria-hidden="true">🔒</div>
-        <h2 id="cpl-pin-title">${escapeHtml(msg("pinModalTitle", undefined, "History locked"))}</h2>
-        <p>${escapeHtml(msg("pinModalDescription", undefined, "Enter your PIN to unlock sidebar history for 5 minutes."))}</p>
+        <h2 id="cpl-pin-title">${escapeHtml(msg("pinModalTitle"))}</h2>
+        <p>${escapeHtml(msg("pinModalDescription"))}</p>
         <form>
-          <label for="cpl-pin-input">${escapeHtml(msg("pinLabelShort", undefined, "PIN"))}</label>
+          <label for="cpl-pin-input">${escapeHtml(msg("pinLabelShort"))}</label>
           <input id="cpl-pin-input" type="password" inputmode="numeric" autocomplete="off" maxlength="32" required />
           <div class="cpl-pin-error" aria-live="polite"></div>
-          <button class="cpl-unlock-button" type="submit">${escapeHtml(msg("unlockForFiveMinutes", undefined, "Unlock for 5 minutes"))}</button>
+          <button class="cpl-unlock-button" type="submit">${escapeHtml(msg("unlockForFiveMinutes"))}</button>
         </form>
       </section>`;
     document.body.append(modal);
@@ -409,7 +504,7 @@
     };
 
     if (!hasPin()) {
-      error.textContent = msg("setPinFirst", undefined, "Set a PIN in the extension popup first.");
+      error.textContent = msg("setPinFirst");
       submitButton.disabled = true;
     } else if (renderCooldown(error, submitButton)) {
       cooldownTimer = setInterval(() => {
@@ -493,6 +588,8 @@
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== "local") return;
     if (changes.enabled) settings.enabled = Boolean(changes.enabled.newValue);
+    if (changes.language) settings.language = changes.language.newValue || "auto";
+    if (changes.protectedAreas) settings.protectedAreas = { ...DEFAULT_AREAS, ...(changes.protectedAreas.newValue || {}) };
     if (changes.pinHash) settings.pinHash = changes.pinHash.newValue || "";
     if (changes.pinSalt) settings.pinSalt = changes.pinSalt.newValue || "";
     if (changes.pinIterations) settings.pinIterations = Number(changes.pinIterations.newValue) || PIN_ITERATIONS;
