@@ -65,7 +65,6 @@
   let refreshQueued = false;
   let modal;
   let badge;
-  let maskLayer;
   let sidebarHost;
 
   function currentLanguage() {
@@ -208,7 +207,7 @@
 
   function protectedCategory(element) {
     if (!element || !isInSidebar(element)) return "";
-    if (element.matches('[data-cpl-badge], [data-cpl-mask-layer], [data-cpl-mask-layer] *, [data-cpl-modal], [data-cpl-modal] *')) return "";
+    if (element.matches('[data-cpl-badge], [data-cpl-modal], [data-cpl-modal] *')) return "";
 
     const text = getText(element);
     const lowerText = text.toLowerCase();
@@ -219,6 +218,7 @@
     if (/new chat|settings|explore gpts/i.test(text)) return "";
     if (/search chats|搜索/.test(lowerText) || /^\/search(\/|$)/i.test(path) || /search/i.test(testId)) return "search";
     if (/library|资料库|库/.test(lowerText) || /^\/library(\/|$)/i.test(path) || /library/i.test(testId)) return "library";
+    if (/^more$|更多/.test(lowerText)) return "";
     if (/pinned|置顶/.test(lowerText) || /pinned/i.test(testId)) return "pinned";
     if (/projects?|项目/.test(lowerText) || /^\/projects?(\/|$)/i.test(path) || /project/i.test(testId)) return "projects";
     if (/history|chats?|聊天|历史/.test(lowerText) || /^\/c(\/|$)/i.test(path) || /(conversation|history)/i.test(testId)) return "chats";
@@ -268,57 +268,13 @@
     }
   }
 
-  function clearMaskLayer() {
-    maskLayer?.remove();
-    maskLayer = null;
-  }
-
-  function setMaskFragments() {
-    clearMaskLayer();
-    if (!isLocked() || !sidebarHost) return;
-
-    const protectedItems = [...document.querySelectorAll(".cpl-protected-item")]
-      .filter((item) => item.isConnected)
-      .map((item) => item.getBoundingClientRect())
-      .filter((rect) => rect.width > 8 && rect.height > 8);
-
-    if (!protectedItems.length) return;
-
-    maskLayer = document.createElement("div");
-    maskLayer.className = "cpl-mask-layer";
-    maskLayer.dataset.cplMaskLayer = "true";
-    maskLayer.addEventListener("click", (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      showPinModal();
-    });
-
-    protectedItems.forEach((rect, index) => {
-      const fragment = document.createElement("button");
-      fragment.type = "button";
-      fragment.className = "cpl-mask-fragment";
-      fragment.style.left = `${rect.left}px`;
-      fragment.style.top = `${rect.top}px`;
-      fragment.style.width = `${rect.width}px`;
-      fragment.style.height = `${rect.height}px`;
-      fragment.setAttribute("aria-label", msg("pinModalTitle"));
-      if (index === 0) {
-        const label = document.createElement("span");
-        label.textContent = msg("sidebarItemLocked");
-        fragment.append(label);
-      }
-      maskLayer.append(fragment);
-    });
-
-    document.body.append(maskLayer);
-  }
-
   function refreshProtection() {
     sidebarHost = getSidebarHost();
     document.querySelectorAll(".cpl-protected-item").forEach((item) => {
       item.classList.remove("cpl-protected-item");
       item.removeAttribute("data-cpl-protected");
       item.removeAttribute("data-cpl-category");
+      item.removeAttribute("data-cpl-mask-label");
     });
 
     if (settings.enabled) {
@@ -331,13 +287,13 @@
           item.classList.add("cpl-protected-item");
           item.dataset.cplProtected = "true";
           item.dataset.cplCategory = category;
+          item.dataset.cplMaskLabel = msg("sidebarItemLocked");
         }
       });
     }
 
     document.documentElement.classList.toggle("cpl-history-is-locked", isLocked());
     setBadge(sidebarHost);
-    setMaskFragments();
     scheduleLockTimer();
   }
 

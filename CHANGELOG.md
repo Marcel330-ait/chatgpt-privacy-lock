@@ -1,5 +1,11 @@
 # Changelog / 更新日志
 
+## 1.2.1 — 2026-06-25
+
+- Reworked the locked sidebar visual effect from floating mask overlays to stable in-row skeleton masks.
+- Fixed a visual issue where unselected areas such as Library could be partially covered by neighboring overlays.
+- Improved category handling for top sidebar controls such as More and Library.
+
 ## 1.2.0 — 2026-06-25
 
 - Added a manual language selector: Auto, Chinese, and English.
