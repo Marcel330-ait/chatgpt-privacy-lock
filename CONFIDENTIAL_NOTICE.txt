@@ -1,4 +1,4 @@
-CONFIDENTIAL — PRIVATE SOURCE CODE
+PROPRIETARY AND CONFIDENTIAL — PRIVATE SOURCE CODE
 
 Copyright (c) 2026 Marcel (@Marcel330-ait). All rights reserved.
 GitHub: https://github.com/Marcel330-ait
@@ -10,5 +10,6 @@ Commercial use, sale, licensing, distribution, publication, sublicensing,
 or deployment for the benefit of a business is prohibited without Marcel's
 prior written permission. Do not remove or alter this notice.
 
-This notice records ownership and permitted use; it does not provide technical
-access control over source code installed as an unpacked Chrome extension.
+This notice records ownership and permitted use. It is not a technical access
+control mechanism, and it does not replace extension packaging, distribution
+controls, account security, or legal review.

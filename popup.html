@@ -9,17 +9,17 @@
   <body class="cpl-popup">
     <main>
       <header>
-        <div class="cpl-popup-lock">🔒</div>
+        <div class="cpl-popup-lock" aria-hidden="true">🔒</div>
         <div>
-          <h1>Privacy Lock</h1>
-          <p>Protect ChatGPT sidebar history.</p>
+          <h1 data-i18n="popupTitle">Privacy Lock</h1>
+          <p data-i18n="popupSubtitle">Protect ChatGPT sidebar history.</p>
         </div>
       </header>
 
       <form id="privacy-form">
         <label class="cpl-toggle-row" for="enabled">
           <span>
-            <strong>Sidebar protection</strong>
+            <strong data-i18n="sidebarProtection">Sidebar protection</strong>
             <small id="status-text">Off</small>
           </span>
           <input id="enabled" type="checkbox" role="switch" />
@@ -28,16 +28,24 @@
 
         <label class="cpl-field-label" for="pin">
           <span id="pin-label">Set a PIN</span>
-          <input id="pin" type="password" inputmode="numeric" autocomplete="off" maxlength="32" placeholder="At least 4 characters" />
+          <input
+            id="pin"
+            type="password"
+            inputmode="numeric"
+            autocomplete="off"
+            maxlength="32"
+            placeholder="At least 4 characters"
+            data-i18n-placeholder="pinPlaceholder"
+          />
           <small id="pin-help">Required before you can enable protection.</small>
         </label>
 
         <p class="cpl-popup-error" id="popup-error" aria-live="polite"></p>
-        <button class="cpl-save-button" type="submit">Save settings</button>
+        <button class="cpl-save-button" type="submit" data-i18n="saveSettings">Save settings</button>
       </form>
 
-      <button class="cpl-lock-now" id="lock-now" type="button">Lock Now</button>
-      <p class="cpl-note">A privacy layer for shoulder-surfing and casual access—not account-level security.</p>
+      <button class="cpl-lock-now" id="lock-now" type="button" data-i18n="lockNow">Lock Now</button>
+      <p class="cpl-note" data-i18n="securityNote">A privacy layer for shoulder-surfing and casual access—not account-level security.</p>
     </main>
     <script src="popup.js"></script>
   </body>

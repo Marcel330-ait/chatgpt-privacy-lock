@@ -1,0 +1,125 @@
+{
+  "extensionName": {
+    "message": "ChatGPT Privacy Lock"
+  },
+  "extensionShortName": {
+    "message": "Privacy Lock"
+  },
+  "extensionDescription": {
+    "message": "Locks and masks ChatGPT sidebar history, projects, pinned chats, library, and search without blocking the active chat."
+  },
+  "popupTitle": {
+    "message": "Privacy Lock"
+  },
+  "popupSubtitle": {
+    "message": "Protect ChatGPT sidebar history."
+  },
+  "sidebarProtection": {
+    "message": "Sidebar protection"
+  },
+  "setPin": {
+    "message": "Set a PIN"
+  },
+  "changePinOptional": {
+    "message": "Change PIN (optional)"
+  },
+  "pinPlaceholder": {
+    "message": "At least 4 characters"
+  },
+  "pinHelpRequired": {
+    "message": "Required before you can enable protection."
+  },
+  "pinHelpExisting": {
+    "message": "Leave blank to keep your existing PIN."
+  },
+  "saveSettings": {
+    "message": "Save settings"
+  },
+  "lockNow": {
+    "message": "Lock Now"
+  },
+  "securityNote": {
+    "message": "A privacy layer for shoulder-surfing and casual access—not account-level security."
+  },
+  "statusOff": {
+    "message": "Off"
+  },
+  "statusLocked": {
+    "message": "Locked"
+  },
+  "statusLockedNow": {
+    "message": "Locked now"
+  },
+  "statusPinRequired": {
+    "message": "PIN required"
+  },
+  "statusUnlockedFor": {
+    "message": "Unlocked — $TIME$",
+    "placeholders": {
+      "time": {
+        "content": "$1"
+      }
+    }
+  },
+  "statusSavedOn": {
+    "message": "On — saved"
+  },
+  "statusSavedOff": {
+    "message": "Off — saved"
+  },
+  "errorChoosePin": {
+    "message": "Choose a PIN with at least 4 characters."
+  },
+  "errorPinLength": {
+    "message": "PIN must have at least 4 characters."
+  },
+  "errorSetPinBeforeLocking": {
+    "message": "Set a PIN and save settings before locking."
+  },
+  "errorTurnOnBeforeLocking": {
+    "message": "Turn on sidebar protection before locking."
+  },
+  "historyLockedBadge": {
+    "message": "🔒 History locked"
+  },
+  "sidebarHistoryLocked": {
+    "message": "🔒 Sidebar history locked"
+  },
+  "pinModalTitle": {
+    "message": "History locked"
+  },
+  "pinModalDescription": {
+    "message": "Enter your PIN to unlock sidebar history for 5 minutes."
+  },
+  "pinLabelShort": {
+    "message": "PIN"
+  },
+  "unlockForFiveMinutes": {
+    "message": "Unlock for 5 minutes"
+  },
+  "incorrectPin": {
+    "message": "Incorrect PIN"
+  },
+  "tooManyAttempts": {
+    "message": "Too many attempts. Try again in $SECONDS$ seconds.",
+    "placeholders": {
+      "seconds": {
+        "content": "$1"
+      }
+    }
+  },
+  "tryAgainInSeconds": {
+    "message": "Try again in $SECONDS$s.",
+    "placeholders": {
+      "seconds": {
+        "content": "$1"
+      }
+    }
+  },
+  "setPinFirst": {
+    "message": "Set a PIN in the extension popup first."
+  },
+  "close": {
+    "message": "Close"
+  }
+}
