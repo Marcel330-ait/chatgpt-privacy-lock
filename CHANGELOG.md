@@ -1,5 +1,10 @@
 # Changelog / 更新日志
 
+## 1.5.1 — 2026-09-05
+
+- Extended home-history masking to the recent tasks, Work items, and automations shown below the Chat home composer.
+- Chat and Work home history now share the generic History item label while the composer and current conversation remain usable.
+
 ## 1.5.0 — 2026-09-05
 
 - Added PIN protection for New chat, More, the Chat/Work switch, and Work home history entries.

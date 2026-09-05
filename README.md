@@ -4,9 +4,9 @@
 > Copyright © 2026 Marcel ([@Marcel330-ait](https://github.com/Marcel330-ait)). All rights reserved.<br>
 > Personal, private, non-commercial use only. See [CONFIDENTIAL_NOTICE.txt](CONFIDENTIAL_NOTICE.txt).
 
-**中文**：一个 Chrome Manifest V3 扩展，用来保护 ChatGPT 左侧栏、Chat/Work 切换和 Work 历史目录中的隐私入口，同时不影响当前对话、消息输入框或发送按钮。
+**中文**：一个 Chrome Manifest V3 扩展，用来保护 ChatGPT 左侧栏、Chat/Work 切换以及 Chat 和 Work 首页历史中的隐私入口，同时不影响当前对话、消息输入框或发送按钮。
 
-**English**: A Chrome Manifest V3 extension that protects ChatGPT sidebar navigation, the Chat/Work switch, and Work history—without affecting the active conversation, message composer, or send button.
+**English**: A Chrome Manifest V3 extension that protects ChatGPT sidebar navigation, the Chat/Work switch, and Chat/Work home history—without affecting the active conversation, message composer, or send button.
 
 ## 功能亮点 / Highlights
 
@@ -19,7 +19,7 @@
 | PIN 使用 PBKDF2 + 随机 salt 存储 | Stores PIN with PBKDF2 + a random salt |
 | 错误 PIN 多次后进入短暂冷却 | Adds a short cooldown after repeated incorrect PIN attempts |
 | 可手动选择 Auto / 中文 / English | Lets users choose Auto / Chinese / English manually |
-| 可选择保护 Search、Library、New chat、More、Pinned、Projects、Chats 以及 Chat/Work 与 Work 历史 | Lets users protect Search, Library, New chat, More, Pinned, Projects, Chats, and Chat/Work history |
+| 可选择保护 Search、Library、New chat、More、Pinned、Projects、Chats 以及 Chat/Work 与首页历史 | Lets users protect Search, Library, New chat, More, Pinned, Projects, Chats, and Chat/Work home history |
 | 遮挡玻璃可选择蓝紫、翡翠或玫瑰 | Offers Indigo, Emerald, and Rose mask-glass tints |
 | 可自定义 1–120 分钟的解锁时间 | Lets users choose an unlock time from 1–120 minutes |
 | 可选择仅打开点击项或解锁整个侧边栏 | Unlocks only the clicked item or the entire sidebar |
@@ -79,8 +79,8 @@ flowchart LR
    **English**: Turn on **Sidebar protection**.
 4. **中文**：选择语言：**Auto / 中文 / English**。<br>
    **English**: Choose a language: **Auto / 中文 / English**.
-5. **中文**：勾选你想保护的区域：Search chats、Library、New chat/More、Pinned chats、Projects、Previous chats，以及 Chat/Work 与 Work 历史。<br>
-   **English**: Select the areas to protect: Search chats, Library, New chat/More, Pinned chats, Projects, Previous chats, and Chat/Work with Work history.
+5. **中文**：勾选你想保护的区域：Search chats、Library、New chat/More、Pinned chats、Projects、Previous chats，以及 Chat/Work 与首页历史。<br>
+   **English**: Select the areas to protect: Search chats, Library, New chat/More, Pinned chats, Projects, Previous chats, and Chat/Work with home history.
 6. **中文**：设置解锁时间，并选择 **仅打开点击项** 或 **打开全部侧边栏**。<br>
    **English**: Set the unlock time and choose **Clicked item only** or **Entire sidebar**.
 7. **中文**：选择遮挡玻璃颜色：**蓝紫 / 翡翠 / 玫瑰**。颜色会实时改变遮挡玻璃，不需要保存，也不会改变扩展面板。<br>

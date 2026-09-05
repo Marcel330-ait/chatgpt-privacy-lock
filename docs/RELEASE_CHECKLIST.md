@@ -14,7 +14,7 @@
 - [ ] Confirm Clicked item only opens and navigates to that item while other protected rows stay locked.
 - [ ] Confirm opening a Project in Clicked item only mode reveals its child chats and controls but not other Projects.
 - [ ] Confirm cumulative item mode keeps every previously opened Project or chat visible until expiry or Lock Now.
-- [ ] Confirm the Chat/Work switch and Work home history entries request a PIN while the active conversation remains usable.
+- [ ] Confirm the Chat/Work switch and both Chat and Work home-history entries request a PIN while the composer and active conversation remain usable.
 - [ ] Confirm Entire sidebar reveals every protected row until the timer ends.
 - [ ] Confirm switching tabs or windows does not end an unlock session early.
 - [ ] Confirm Search, Library, Pinned, Projects, and Chats directory labels remain readable while protected.

@@ -35,7 +35,7 @@
       unlockForMinutes: "Unlock for $1 minutes",
       maskedProject: "Project",
       maskedChat: "Chat",
-      maskedWorkItem: "Work item",
+      maskedHomeItem: "History item",
       incorrectPin: "Incorrect PIN",
       tooManyAttempts: "Too many attempts. Try again in $1 seconds.",
       tryAgainInSeconds: "Try again in $1s.",
@@ -53,7 +53,7 @@
       unlockForMinutes: "解锁 $1 分钟",
       maskedProject: "项目",
       maskedChat: "聊天",
-      maskedWorkItem: "工作条目",
+      maskedHomeItem: "历史条目",
       incorrectPin: "PIN 错误",
       tooManyAttempts: "尝试次数过多，请 $1 秒后再试。",
       tryAgainInSeconds: "请 $1 秒后再试。",
@@ -64,7 +64,16 @@
 
   const PROTECTED_TEST_ID = /(conversation|history|project|library|search|pinned)/i;
   const INTERACTIVE_SELECTOR = 'a, button, [role="button"], [role="link"], [role="tab"]';
-  const WORK_INPUT_SELECTOR = 'textarea[placeholder*="work on" i], input[placeholder*="work on" i], [contenteditable="true"][data-placeholder*="work on" i]';
+  const HOME_INPUT_SELECTOR = [
+    'textarea[placeholder*="work on" i]',
+    'input[placeholder*="work on" i]',
+    '[contenteditable="true"][data-placeholder*="work on" i]',
+    'textarea[placeholder*="ask chatgpt" i]',
+    'input[placeholder*="ask chatgpt" i]',
+    '[contenteditable="true"][data-placeholder*="ask chatgpt" i]',
+    'textarea[placeholder*="ask anything" i]',
+    '[contenteditable="true"][data-placeholder*="ask anything" i]'
+  ].join(", ");
 
   let settings = {
     enabled: false,
@@ -98,7 +107,7 @@
   let firstPrivateHeadingTop = Infinity;
   let workspaceProtectedItems = new Set();
   let workSwitchItems = new Set();
-  let workHomeRoot = null;
+  let homeDirectoryRoot = null;
   let unlockedItemKeySet = new Set();
   let unlockedProjectIdentitySet = new Set();
 
@@ -364,17 +373,18 @@
     return new Set();
   }
 
-  function workHomeDirectoryItems() {
-    workHomeRoot = null;
-    const input = document.querySelector(WORK_INPUT_SELECTOR);
+  function homeDirectoryItems() {
+    homeDirectoryRoot = null;
+    const input = document.querySelector(HOME_INPUT_SELECTOR);
     if (!input) return [];
 
     const main = input.closest("main") || input.closest('[role="main"]');
     if (!main) return [];
     const isWorkHome = [...main.querySelectorAll("h1,h2,h3")]
       .some((heading) => /^what should we work on\??$/i.test(getText(heading).trim()));
-    if (!isWorkHome) return [];
-    workHomeRoot = main;
+    const isChatHome = location.pathname === "/" && !isConversationPath(location.pathname);
+    if (!isWorkHome && !isChatHome) return [];
+    homeDirectoryRoot = main;
 
     let composer = input;
     for (let ancestor = input.parentElement; ancestor && ancestor !== main; ancestor = ancestor.parentElement) {
@@ -389,14 +399,14 @@
       if (isCompositeInteractiveContainer(element)) return false;
       const text = getText(element).replace(/\s+/g, " ").trim();
       const rect = element.getBoundingClientRect();
-      if (!text || rect.width < 160 || rect.height < 20 || rect.height > 90 || rect.top < directoryTop) return false;
+      if (!text || rect.width < 240 || rect.height < 20 || rect.height > 90 || rect.top < directoryTop) return false;
       return !/^(project|files|plugins|open desktop app|项目|文件|插件|打开桌面应用)$/i.test(text);
     });
   }
 
   function rebuildWorkspaceScanContext() {
     workSwitchItems = findWorkSwitchItems();
-    workspaceProtectedItems = new Set([...workSwitchItems, ...workHomeDirectoryItems()]);
+    workspaceProtectedItems = new Set([...workSwitchItems, ...homeDirectoryItems()]);
   }
 
   function protectedCategory(element) {
@@ -507,7 +517,7 @@
     if (category === "pinned") return looksLikeProjectItem(element) ? msg("maskedProject") : msg("maskedChat");
     if (category === "projects") return msg("maskedProject");
     if (category === "chats") return msg("maskedChat");
-    if (category === "workspace") return workSwitchItems.has(element) ? firstLine.slice(0, 40) : msg("maskedWorkItem");
+    if (category === "workspace") return workSwitchItems.has(element) ? firstLine.slice(0, 40) : msg("maskedHomeItem");
     return "";
   }
 
@@ -930,12 +940,12 @@
       );
     });
     const workspaceChanged = mutations.some((mutation) => {
-      if (workHomeRoot && mutation.target instanceof Node &&
-          (workHomeRoot.contains(mutation.target) || (mutation.target instanceof Element && mutation.target.contains(workHomeRoot)))) {
+      if (homeDirectoryRoot && mutation.target instanceof Node &&
+          (homeDirectoryRoot.contains(mutation.target) || (mutation.target instanceof Element && mutation.target.contains(homeDirectoryRoot)))) {
         return true;
       }
       return [...mutation.addedNodes].some((node) =>
-        node instanceof Element && (node.matches(WORK_INPUT_SELECTOR) || node.querySelector(WORK_INPUT_SELECTOR))
+        node instanceof Element && (node.matches(HOME_INPUT_SELECTOR) || node.querySelector(HOME_INPUT_SELECTOR))
       );
     });
     if (sidebarChanged || workspaceChanged) queueRefresh(true);
