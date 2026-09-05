@@ -9,7 +9,7 @@ ChatGPT Privacy Lock is a local browser-extension privacy layer for masking Chat
 ### Data handled
 
 - The extension stores its enabled/disabled state in `chrome.storage.local`.
-- The extension stores display preferences such as language, mask-glass tint mode, the locally detected ChatGPT accent color, and selected protected sidebar areas in `chrome.storage.local`.
+- The extension stores display preferences such as language, mask-glass tint, unlock duration, unlock scope, and selected protected sidebar areas in `chrome.storage.local`.
 - The extension stores a PIN-derived value using PBKDF2 with a random salt in `chrome.storage.local`.
 - The extension stores temporary lock metadata such as `unlockUntil`, failed-attempt count, and cooldown time in `chrome.storage.local`.
 
@@ -34,7 +34,7 @@ ChatGPT Privacy Lock 是一个本地浏览器扩展，用于遮罩 ChatGPT 侧�
 ### 处理的数据
 
 - 扩展会把开启/关闭状态存储在 `chrome.storage.local`。
-- 扩展会把语言、遮挡玻璃颜色模式、本地检测到的 ChatGPT Accent color 和所选保护区域等显示偏好存储在 `chrome.storage.local`。
+- 扩展会把语言、遮挡玻璃颜色、解锁时间、解锁范围和所选保护区域等显示偏好存储在 `chrome.storage.local`。
 - 扩展会使用 PBKDF2 + 随机 salt 保存 PIN 的派生值，存储位置为 `chrome.storage.local`。
 - 扩展会保存临时锁定状态，例如 `unlockUntil`、错误次数和冷却时间，存储位置为 `chrome.storage.local`。
 

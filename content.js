@@ -4,7 +4,6 @@
  * See CONFIDENTIAL_NOTICE.txt.
  */
 (() => {
-  const UNLOCK_DURATION_MS = 5 * 60 * 1000;
   const PIN_ITERATIONS = 150000;
   const MAX_FAILED_ATTEMPTS = 5;
   const COOLDOWN_MS = 30 * 1000;
@@ -25,13 +24,13 @@
   const TEXT = {
     en: {
       historyLockedBadge: "🔒 History locked",
-      sidebarItemLocked: "Locked",
       modalEyebrow: "Private by design",
       pinModalTitle: "History locked",
-      pinModalDescription: "Enter your PIN to unlock sidebar history for 5 minutes.",
+      pinModalDescriptionItem: "Enter your PIN to open only this item for $1 minutes.",
+      pinModalDescriptionAll: "Enter your PIN to unlock the full sidebar for $1 minutes.",
       localOnly: "Your PIN protection stays on this device.",
       pinLabelShort: "PIN",
-      unlockForFiveMinutes: "Unlock for 5 minutes",
+      unlockForMinutes: "Unlock for $1 minutes",
       incorrectPin: "Incorrect PIN",
       tooManyAttempts: "Too many attempts. Try again in $1 seconds.",
       tryAgainInSeconds: "Try again in $1s.",
@@ -40,13 +39,13 @@
     },
     zh_CN: {
       historyLockedBadge: "🔒 历史已锁定",
-      sidebarItemLocked: "已锁定",
       modalEyebrow: "隐私优先设计",
       pinModalTitle: "历史已锁定",
-      pinModalDescription: "输入 PIN 后，侧边栏历史将解锁 5 分钟。",
+      pinModalDescriptionItem: "输入 PIN 后，仅打开当前选择的项目 $1 分钟。",
+      pinModalDescriptionAll: "输入 PIN 后，整个侧边栏将解锁 $1 分钟。",
       localOnly: "PIN 保护数据仅保存在此设备。",
       pinLabelShort: "PIN",
-      unlockForFiveMinutes: "解锁 5 分钟",
+      unlockForMinutes: "解锁 $1 分钟",
       incorrectPin: "PIN 错误",
       tooManyAttempts: "尝试次数过多，请 $1 秒后再试。",
       tryAgainInSeconds: "请 $1 秒后再试。",
@@ -60,21 +59,25 @@
   let settings = {
     enabled: false,
     language: "auto",
-    accentTheme: "chatgpt",
-    detectedAccentColor: "",
+    accentTheme: "indigo",
     protectedAreas: { ...DEFAULT_AREAS },
     pinHash: "",
     pinSalt: "",
     pinIterations: PIN_ITERATIONS,
     pinVersion: 1,
+    unlockDurationMinutes: 5,
+    unlockScope: "item",
     unlockUntil: 0,
+    activeUnlockScope: "",
+    unlockedItemKey: "",
     failedPinAttempts: 0,
     pinCooldownUntil: 0
   };
 
   let unlockTimer;
-  let refreshQueued = false;
+  let refreshTimer;
   let modal;
+  let pendingProtectedItem;
   let badge;
   let sidebarHost;
 
@@ -94,27 +97,35 @@
       "enabled",
       "language",
       "accentTheme",
-      "detectedAccentColor",
       "protectedAreas",
       "pinHash",
       "pinSalt",
       "pinIterations",
       "pinVersion",
+      "unlockDurationMinutes",
+      "unlockScope",
       "unlockUntil",
+      "activeUnlockScope",
+      "unlockedItemKey",
       "failedPinAttempts",
       "pinCooldownUntil"
     ], (stored) => {
       settings = {
         enabled: Boolean(stored.enabled),
         language: stored.language || "auto",
-        accentTheme: ["chatgpt", "indigo", "emerald", "rose"].includes(stored.accentTheme) ? stored.accentTheme : "chatgpt",
-        detectedAccentColor: validCssColor(stored.detectedAccentColor) ? stored.detectedAccentColor : "",
+        accentTheme: ["indigo", "emerald", "rose"].includes(stored.accentTheme) ? stored.accentTheme : "indigo",
         protectedAreas: { ...DEFAULT_AREAS, ...(stored.protectedAreas || {}) },
         pinHash: stored.pinHash || "",
         pinSalt: stored.pinSalt || "",
         pinIterations: Number(stored.pinIterations) || PIN_ITERATIONS,
         pinVersion: Number(stored.pinVersion) || (stored.pinSalt ? 2 : 1),
+        unlockDurationMinutes: Math.min(120, Math.max(1, Number(stored.unlockDurationMinutes) || 5)),
+        unlockScope: ["item", "all"].includes(stored.unlockScope) ? stored.unlockScope : "item",
         unlockUntil: Number(stored.unlockUntil) || 0,
+        activeUnlockScope: ["item", "all"].includes(stored.activeUnlockScope)
+          ? stored.activeUnlockScope
+          : ((Number(stored.unlockUntil) || 0) > Date.now() ? "all" : ""),
+        unlockedItemKey: stored.unlockedItemKey || "",
         failedPinAttempts: Number(stored.failedPinAttempts) || 0,
         pinCooldownUntil: Number(stored.pinCooldownUntil) || 0
       };
@@ -123,56 +134,21 @@
   });
 
   const hasPin = () => Boolean(settings.pinHash);
-  const isUnlocked = () => settings.enabled && settings.unlockUntil > Date.now();
-  const isLocked = () => settings.enabled && !isUnlocked();
-
-  function validCssColor(value) {
-    return typeof value === "string" &&
-      value.length < 100 &&
-      /^(#|rgba?\(|hsla?\(|oklch\(|oklab\(|lch\(|lab\(|color\()/i.test(value.trim()) &&
-      CSS.supports("color", value.trim());
-  }
-
-  function detectChatGPTAccent() {
-    const rootStyle = getComputedStyle(document.documentElement);
-    const bodyStyle = document.body ? getComputedStyle(document.body) : null;
-    const names = [
-      "--button-accent-theme-background-color-default",
-      "--theme-content-accent",
-      "--button-accent-background-color-default",
-      "--accent-blue"
-    ];
-    for (const name of names) {
-      const value = (rootStyle.getPropertyValue(name) || bodyStyle?.getPropertyValue(name) || "").trim();
-      if (validCssColor(value)) return value;
-    }
-    return "";
-  }
-
-  function syncDetectedAccent() {
-    if (settings.accentTheme !== "chatgpt") return false;
-    const detected = detectChatGPTAccent();
-    if (!detected || detected === settings.detectedAccentColor) return false;
-    settings.detectedAccentColor = detected;
-    chrome.storage.local.set({ detectedAccentColor: detected });
-    return true;
-  }
+  const hasActiveUnlock = () => settings.enabled && settings.unlockUntil > Date.now();
+  const isGlobalUnlocked = () => hasActiveUnlock() && settings.activeUnlockScope === "all";
+  const isLocked = () => settings.enabled && !isGlobalUnlocked();
 
   function applyMaskTint() {
-    const detected = validCssColor(settings.detectedAccentColor) ? settings.detectedAccentColor : "";
-    const tint = settings.accentTheme === "chatgpt"
-      ? (detected || MASK_TINTS.indigo)
-      : (MASK_TINTS[settings.accentTheme] || MASK_TINTS.indigo);
+    const tint = MASK_TINTS[settings.accentTheme] || MASK_TINTS.indigo;
     document.documentElement.style.setProperty("--cpl-mask-accent", tint);
   }
 
   function queueRefresh() {
-    if (refreshQueued) return;
-    refreshQueued = true;
-    requestAnimationFrame(() => {
-      refreshQueued = false;
+    clearTimeout(refreshTimer);
+    refreshTimer = setTimeout(() => {
+      refreshTimer = null;
       refreshProtection();
-    });
+    }, 80);
   }
 
   function getText(element) {
@@ -290,13 +266,38 @@
 
   function itemLooksProtected(element) {
     const category = protectedCategory(element);
-    return Boolean(category && settings.protectedAreas[category]);
+    if (!category || !settings.protectedAreas[category]) return false;
+    if (hasActiveUnlock() && settings.activeUnlockScope === "item") {
+      return protectedItemKey(element, category) !== settings.unlockedItemKey;
+    }
+    return true;
+  }
+
+  function protectedItemKey(element, category = protectedCategory(element)) {
+    const href = element?.getAttribute?.("href") || "";
+    if (href) {
+      try {
+        const url = new URL(href, location.origin);
+        return `${category}|${url.pathname}${url.search}`;
+      } catch {
+        // Fall through to a stable local identifier.
+      }
+    }
+    const testId = element?.getAttribute?.("data-testid") || "";
+    return `${category}|${testId}|${getText(element).slice(0, 120)}`;
+  }
+
+  function publicDirectoryLabel(element, category) {
+    const text = getText(element).trim();
+    const firstLine = text.split(/\r?\n/)[0].replace(/\s+/g, " ").trim();
+    if (["search", "library"].includes(category)) return firstLine.slice(0, 40);
+    if (/^(pinned|projects?|chats?|置顶|项目|聊天)$/i.test(firstLine)) return firstLine.slice(0, 40);
+    return "";
   }
 
   function protectedItemFrom(target) {
     if (!(target instanceof Element)) return null;
-    const clickable = target.closest('a, button, [role="button"], [role="link"]');
-    return clickable && itemLooksProtected(clickable) ? clickable : null;
+    return target.closest(".cpl-protected-item[data-cpl-protected='true']");
   }
 
   function setBadge(host) {
@@ -327,28 +328,37 @@
   }
 
   function refreshProtection() {
-    syncDetectedAccent();
     applyMaskTint();
     sidebarHost = getSidebarHost();
+    const clickableItems = sidebarHost
+      ? [...sidebarHost.querySelectorAll('a, button, [role="button"], [role="link"]')]
+      : [];
+    const currentItems = new Set(clickableItems);
+
+    clickableItems.forEach((item) => {
+      const category = protectedCategory(item);
+      const shouldProtect = settings.enabled && category && settings.protectedAreas[category] && itemLooksProtected(item);
+      item.classList.toggle("cpl-protected-item", Boolean(shouldProtect));
+      if (shouldProtect) {
+        item.dataset.cplProtected = "true";
+        item.dataset.cplCategory = category;
+        const label = publicDirectoryLabel(item, category);
+        if (label) item.dataset.cplPublicLabel = label;
+        else item.removeAttribute("data-cpl-public-label");
+      } else {
+        item.removeAttribute("data-cpl-protected");
+        item.removeAttribute("data-cpl-category");
+        item.removeAttribute("data-cpl-public-label");
+      }
+    });
+
     document.querySelectorAll(".cpl-protected-item").forEach((item) => {
+      if (currentItems.has(item)) return;
       item.classList.remove("cpl-protected-item");
       item.removeAttribute("data-cpl-protected");
       item.removeAttribute("data-cpl-category");
+      item.removeAttribute("data-cpl-public-label");
     });
-
-    if (settings.enabled) {
-      const clickableItems = sidebarHost
-        ? sidebarHost.querySelectorAll('a, button, [role="button"], [role="link"]')
-        : document.querySelectorAll('a, button, [role="button"], [role="link"]');
-      clickableItems.forEach((item) => {
-        const category = protectedCategory(item);
-        if (category && settings.protectedAreas[category]) {
-          item.classList.add("cpl-protected-item");
-          item.dataset.cplProtected = "true";
-          item.dataset.cplCategory = category;
-        }
-      });
-    }
 
     document.documentElement.classList.toggle("cpl-history-is-locked", isLocked());
     setBadge(sidebarHost);
@@ -360,21 +370,17 @@
     if (!settings.enabled || settings.unlockUntil <= Date.now()) return;
     unlockTimer = setTimeout(async () => {
       settings.unlockUntil = 0;
-      await chrome.storage.local.set({ unlockUntil: 0 });
+      settings.activeUnlockScope = "";
+      settings.unlockedItemKey = "";
+      await chrome.storage.local.set({ unlockUntil: 0, activeUnlockScope: "", unlockedItemKey: "" });
       refreshProtection();
     }, settings.unlockUntil - Date.now() + 50);
-  }
-
-  async function lockNow() {
-    if (settings.unlockUntil <= Date.now()) return;
-    settings.unlockUntil = 0;
-    await chrome.storage.local.set({ unlockUntil: 0 });
-    refreshProtection();
   }
 
   function closeModal() {
     modal?.remove();
     modal = null;
+    pendingProtectedItem = null;
   }
 
   function escapeHtml(value) {
@@ -483,11 +489,15 @@
     return true;
   }
 
-  function showPinModal() {
+  function showPinModal(protectedItem) {
     if (modal) {
       modal.querySelector("input")?.focus();
       return;
     }
+
+    pendingProtectedItem = protectedItem;
+    const duration = String(settings.unlockDurationMinutes);
+    const descriptionKey = settings.unlockScope === "all" ? "pinModalDescriptionAll" : "pinModalDescriptionItem";
 
     modal = document.createElement("div");
     modal.className = "cpl-modal-backdrop";
@@ -502,12 +512,12 @@
             <h2 id="cpl-pin-title">${escapeHtml(msg("pinModalTitle"))}</h2>
           </div>
         </div>
-        <p id="cpl-pin-description">${escapeHtml(msg("pinModalDescription"))}</p>
+        <p id="cpl-pin-description">${escapeHtml(msg(descriptionKey, [duration]))}</p>
         <form>
           <label for="cpl-pin-input">${escapeHtml(msg("pinLabelShort"))}</label>
           <input id="cpl-pin-input" type="password" inputmode="numeric" autocomplete="off" maxlength="32" required />
           <div class="cpl-pin-error" aria-live="polite"></div>
-          <button class="cpl-unlock-button" type="submit">${escapeHtml(msg("unlockForFiveMinutes"))}</button>
+          <button class="cpl-unlock-button" type="submit">${escapeHtml(msg("unlockForMinutes", [duration]))}</button>
         </form>
         <p class="cpl-modal-local-note">${escapeHtml(msg("localOnly"))}</p>
       </section>`;
@@ -571,15 +581,22 @@
 
       settings.failedPinAttempts = 0;
       settings.pinCooldownUntil = 0;
-      settings.unlockUntil = Date.now() + UNLOCK_DURATION_MS;
+      const target = pendingProtectedItem;
+      const targetKey = target ? protectedItemKey(target) : "";
+      settings.activeUnlockScope = settings.unlockScope === "item" && targetKey ? "item" : "all";
+      settings.unlockedItemKey = settings.activeUnlockScope === "item" ? targetKey : "";
+      settings.unlockUntil = Date.now() + (settings.unlockDurationMinutes * 60 * 1000);
       await chrome.storage.local.set({
         failedPinAttempts: 0,
         pinCooldownUntil: 0,
-        unlockUntil: settings.unlockUntil
+        unlockUntil: settings.unlockUntil,
+        activeUnlockScope: settings.activeUnlockScope,
+        unlockedItemKey: settings.unlockedItemKey
       });
       stopCooldownTimer();
       closeModal();
       refreshProtection();
+      if (target?.isConnected) setTimeout(() => target.click(), 0);
     });
     input.focus();
   }
@@ -590,7 +607,7 @@
     if (!item) return;
     event.preventDefault();
     event.stopImmediatePropagation();
-    showPinModal();
+    showPinModal(item);
   }
 
   document.addEventListener("click", blockProtectedInteraction, true);
@@ -599,11 +616,6 @@
     if ((event.key === "Enter" || event.key === " ") && isLocked()) blockProtectedInteraction(event);
     if (event.key === "Escape" && modal) closeModal();
   }, true);
-
-  document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "hidden") lockNow();
-  });
-  window.addEventListener("blur", () => lockNow());
 
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (sender.id !== chrome.runtime.id ||
@@ -625,26 +637,37 @@
     if (area !== "local") return;
     if (changes.enabled) settings.enabled = Boolean(changes.enabled.newValue);
     if (changes.language) settings.language = changes.language.newValue || "auto";
-    if (changes.accentTheme) settings.accentTheme = ["chatgpt", "indigo", "emerald", "rose"].includes(changes.accentTheme.newValue) ? changes.accentTheme.newValue : "chatgpt";
-    if (changes.detectedAccentColor) settings.detectedAccentColor = validCssColor(changes.detectedAccentColor.newValue) ? changes.detectedAccentColor.newValue : "";
+    if (changes.accentTheme) settings.accentTheme = ["indigo", "emerald", "rose"].includes(changes.accentTheme.newValue) ? changes.accentTheme.newValue : "indigo";
     if (changes.protectedAreas) settings.protectedAreas = { ...DEFAULT_AREAS, ...(changes.protectedAreas.newValue || {}) };
     if (changes.pinHash) settings.pinHash = changes.pinHash.newValue || "";
     if (changes.pinSalt) settings.pinSalt = changes.pinSalt.newValue || "";
     if (changes.pinIterations) settings.pinIterations = Number(changes.pinIterations.newValue) || PIN_ITERATIONS;
     if (changes.pinVersion) settings.pinVersion = Number(changes.pinVersion.newValue) || (settings.pinSalt ? 2 : 1);
+    if (changes.unlockDurationMinutes) settings.unlockDurationMinutes = Math.min(120, Math.max(1, Number(changes.unlockDurationMinutes.newValue) || 5));
+    if (changes.unlockScope) settings.unlockScope = ["item", "all"].includes(changes.unlockScope.newValue) ? changes.unlockScope.newValue : "item";
     if (changes.unlockUntil) settings.unlockUntil = Number(changes.unlockUntil.newValue) || 0;
+    if (changes.activeUnlockScope) settings.activeUnlockScope = ["item", "all"].includes(changes.activeUnlockScope.newValue) ? changes.activeUnlockScope.newValue : "";
+    if (changes.unlockedItemKey) settings.unlockedItemKey = changes.unlockedItemKey.newValue || "";
     if (changes.failedPinAttempts) settings.failedPinAttempts = Number(changes.failedPinAttempts.newValue) || 0;
     if (changes.pinCooldownUntil) settings.pinCooldownUntil = Number(changes.pinCooldownUntil.newValue) || 0;
-    if (!settings.enabled || !isLocked()) closeModal();
+    if (!settings.enabled || !isLocked() || (changes.unlockUntil && settings.unlockUntil <= Date.now())) closeModal();
     queueRefresh();
   });
 
-  new MutationObserver(queueRefresh).observe(document.documentElement, { childList: true, subtree: true });
-  setInterval(() => {
-    if (syncDetectedAccent()) applyMaskTint();
-  }, 2000);
+  new MutationObserver((mutations) => {
+    if (!sidebarHost || !sidebarHost.isConnected) {
+      queueRefresh();
+      return;
+    }
+    const sidebarChanged = mutations.some((mutation) => {
+      if (sidebarHost.contains(mutation.target)) return true;
+      return [...mutation.addedNodes, ...mutation.removedNodes].some((node) =>
+        node === sidebarHost || (node instanceof Element && node.contains(sidebarHost))
+      );
+    });
+    if (sidebarChanged) queueRefresh();
+  }).observe(document.documentElement, { childList: true, subtree: true });
   window.addEventListener("resize", queueRefresh);
-  window.addEventListener("scroll", queueRefresh, true);
 
   readSettings().then(refreshProtection);
 })();

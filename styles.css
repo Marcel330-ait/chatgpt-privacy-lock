@@ -24,9 +24,9 @@
 }
 
 .cpl-history-is-locked .cpl-protected-item > * {
-  opacity: .25 !important;
-  filter: blur(9px) saturate(.7) !important;
-  transform: scale(1.025) !important;
+  opacity: .16 !important;
+  filter: blur(6px) saturate(.75) !important;
+  transform: scale(1.015) !important;
   transform-origin: left center !important;
 }
 
@@ -48,11 +48,10 @@
   box-shadow:
     inset 0 1px 0 rgb(255 255 255 / 27%),
     inset 0 -1px 0 rgb(0 0 0 / 18%),
-    0 5px 18px color-mix(in srgb, var(--cpl-mask-accent) 16%, transparent);
-  -webkit-backdrop-filter: blur(15px) saturate(165%);
-  backdrop-filter: blur(15px) saturate(165%);
+    0 4px 12px color-mix(in srgb, var(--cpl-mask-accent) 13%, transparent);
+  -webkit-backdrop-filter: blur(8px) saturate(140%);
+  backdrop-filter: blur(8px) saturate(140%);
   pointer-events: none;
-  animation: cpl-mask-shimmer 5.5s ease-in-out infinite;
 }
 
 .cpl-history-is-locked .cpl-protected-item::after {
@@ -71,6 +70,24 @@
     0 0 0 4px color-mix(in srgb, var(--cpl-mask-accent) 13%, transparent),
     0 0 12px color-mix(in srgb, var(--cpl-mask-accent) 50%, transparent);
   pointer-events: none;
+}
+
+.cpl-history-is-locked .cpl-protected-item[data-cpl-public-label]::after {
+  content: attr(data-cpl-public-label);
+  top: 50%;
+  right: auto;
+  left: 16px;
+  width: auto;
+  height: auto;
+  transform: translateY(-50%);
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  color: inherit;
+  -webkit-text-fill-color: currentColor;
+  font: 650 13px/1.2 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  letter-spacing: normal;
+  white-space: nowrap;
 }
 
 @keyframes cpl-mask-shimmer {
@@ -169,8 +186,8 @@
   padding-top: max(24px, env(safe-area-inset-top));
   padding-bottom: max(24px, env(safe-area-inset-bottom));
   background: rgb(4 5 10 / 52%);
-  -webkit-backdrop-filter: blur(13px) saturate(120%);
-  backdrop-filter: blur(13px) saturate(120%);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
   font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   animation: cpl-backdrop-in .16s ease-out;
 }
@@ -191,8 +208,8 @@
     inset 0 1px 0 rgb(255 255 255 / 24%),
     inset 0 -1px 0 rgb(0 0 0 / 20%),
     0 30px 100px rgb(0 0 0 / 56%);
-  -webkit-backdrop-filter: blur(32px) saturate(160%);
-  backdrop-filter: blur(32px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(145%);
+  backdrop-filter: blur(18px) saturate(145%);
   color: #fafafd;
   animation: cpl-modal-in .2s cubic-bezier(.2, .8, .2, 1);
 }
@@ -457,8 +474,8 @@
     linear-gradient(135deg, rgb(255 255 255 / 10%), transparent 46%),
     rgb(29 31 41 / 62%);
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 16%), 0 10px 34px rgb(0 0 0 / 18%);
-  -webkit-backdrop-filter: blur(28px) saturate(150%);
-  backdrop-filter: blur(28px) saturate(150%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  backdrop-filter: blur(14px) saturate(140%);
   transition: border-color .18s ease, background .18s ease;
 }
 
@@ -589,8 +606,8 @@
     linear-gradient(135deg, rgb(255 255 255 / 7%), transparent 42%),
     rgb(24 26 34 / 58%);
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 10%), 0 8px 26px rgb(0 0 0 / 13%);
-  -webkit-backdrop-filter: blur(25px) saturate(145%);
-  backdrop-filter: blur(25px) saturate(145%);
+  -webkit-backdrop-filter: blur(14px) saturate(135%);
+  backdrop-filter: blur(14px) saturate(135%);
 }
 
 .cpl-panel-heading {
@@ -713,7 +730,7 @@
 .cpl-color-fieldset {
   display: grid;
   grid-column: 1 / -1;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 7px;
   margin: 3px 0 0;
   padding: 10px 0 0;
@@ -779,9 +796,6 @@
 .cpl-color-indigo { background: #7188f7; }
 .cpl-color-emerald { background: #42b883; }
 .cpl-color-rose { background: #e26d8d; }
-.cpl-color-chatgpt {
-  background: conic-gradient(from 45deg, #62c495, #7188f7, #e26d8d, #62c495);
-}
 
 .cpl-field-label {
   display: block;

@@ -26,10 +26,15 @@ const TEXT = {
     languageEnglish: "English",
     languageHelp: "Auto follows Chrome's language.",
     accentColor: "Mask glass tint",
-    colorChatGPT: "Follow ChatGPT",
     colorIndigo: "Indigo",
     colorEmerald: "Emerald",
     colorRose: "Rose",
+    unlockDuration: "Unlock time",
+    unlockDurationHelp: "1–120 minutes.",
+    unlockScope: "Unlock scope",
+    unlockScopeItem: "Clicked item only",
+    unlockScopeAll: "Entire sidebar",
+    unlockScopeHelp: "Choose what a correct PIN reveals.",
     protectWhat: "Hide these sidebar areas",
     areaSearch: "Search chats",
     areaLibrary: "Library",
@@ -52,7 +57,8 @@ const TEXT = {
     statusLocked: "Locked",
     statusLockedNow: "Locked now",
     statusPinRequired: "PIN required",
-    statusUnlockedFor: "Unlocked — $1",
+    statusUnlockedItemFor: "One item — $1",
+    statusUnlockedAllFor: "All unlocked — $1",
     statusSavedOn: "On — saved",
     statusSavedOff: "Off — saved",
     errorChoosePin: "Choose a PIN with at least 4 characters.",
@@ -74,10 +80,15 @@ const TEXT = {
     languageEnglish: "English",
     languageHelp: "自动模式会跟随 Chrome 语言。",
     accentColor: "遮挡玻璃颜色",
-    colorChatGPT: "跟随 ChatGPT",
     colorIndigo: "蓝紫",
     colorEmerald: "翡翠",
     colorRose: "玫瑰",
+    unlockDuration: "解锁时间",
+    unlockDurationHelp: "可设置 1–120 分钟。",
+    unlockScope: "解锁范围",
+    unlockScopeItem: "仅打开点击项",
+    unlockScopeAll: "打开全部侧边栏",
+    unlockScopeHelp: "选择 PIN 正确后显示哪些内容。",
     protectWhat: "隐藏这些侧边栏区域",
     areaSearch: "搜索聊天",
     areaLibrary: "资料库",
@@ -100,7 +111,8 @@ const TEXT = {
     statusLocked: "已锁定",
     statusLockedNow: "已立即锁定",
     statusPinRequired: "需要设置 PIN",
-    statusUnlockedFor: "已解锁 — $1",
+    statusUnlockedItemFor: "单项已开 — $1",
+    statusUnlockedAllFor: "全部已开 — $1",
     statusSavedOn: "已开启 — 已保存",
     statusSavedOff: "已关闭 — 已保存",
     errorChoosePin: "请选择至少 4 位字符的 PIN。",
@@ -123,13 +135,15 @@ const areaCount = document.querySelector("#area-count");
 const versionText = document.querySelector("#version-text");
 const error = document.querySelector("#popup-error");
 const lockNow = document.querySelector("#lock-now");
+const unlockDuration = document.querySelector("#unlock-duration");
+const unlockScope = document.querySelector("#unlock-scope");
 const areaInputs = [...document.querySelectorAll("[data-area]")];
 const accentInputs = [...document.querySelectorAll('[name="accent-theme"]')];
 
 let hasPin = false;
 let statusTimer;
 let currentUnlockUntil = 0;
-let detectedAccentColor = "";
+let currentActiveUnlockScope = "";
 
 function currentLanguage() {
   if (language.value === "en" || language.value === "zh_CN") return language.value;
@@ -192,10 +206,13 @@ function formatRemaining(ms) {
   return `${minutes}:${seconds}`;
 }
 
-function statusLabel({ isEnabled, unlockUntil }) {
+function statusLabel({ isEnabled, unlockUntil, activeUnlockScope }) {
   if (!isEnabled) return msg("statusOff");
   if (!hasPin) return msg("statusPinRequired");
-  if (unlockUntil > Date.now()) return msg("statusUnlockedFor", [formatRemaining(unlockUntil - Date.now())]);
+  if (unlockUntil > Date.now()) {
+    const key = activeUnlockScope === "item" ? "statusUnlockedItemFor" : "statusUnlockedAllFor";
+    return msg(key, [formatRemaining(unlockUntil - Date.now())]);
+  }
   return msg("statusLocked");
 }
 
@@ -208,21 +225,14 @@ function hasSelectedArea() {
 }
 
 function selectedAccent() {
-  return accentInputs.find((input) => input.checked)?.value || "chatgpt";
+  return accentInputs.find((input) => input.checked)?.value || "indigo";
 }
 
-function updateAccent() {
-  const followSwatch = document.querySelector(".cpl-color-chatgpt");
-  if (!followSwatch) return;
-  followSwatch.style.removeProperty("background");
-  if (validCssColor(detectedAccentColor)) followSwatch.style.background = detectedAccentColor;
-}
-
-function validCssColor(value) {
-  return typeof value === "string" &&
-    value.length < 100 &&
-    /^(#|rgba?\(|hsla?\(|oklch\(|oklab\(|lch\(|lab\(|color\()/i.test(value.trim()) &&
-    CSS.supports("color", value.trim());
+function selectedDurationMinutes() {
+  const value = Math.round(Number(unlockDuration.value) || 5);
+  const clamped = Math.min(120, Math.max(1, value));
+  unlockDuration.value = String(clamped);
+  return clamped;
 }
 
 async function notifyActiveChatGPT() {
@@ -257,36 +267,41 @@ function updateCopy(stored = {}) {
   if (Object.prototype.hasOwnProperty.call(stored, "unlockUntil")) {
     currentUnlockUntil = Number(stored.unlockUntil) || 0;
   }
+  if (Object.prototype.hasOwnProperty.call(stored, "activeUnlockScope")) {
+    currentActiveUnlockScope = ["item", "all"].includes(stored.activeUnlockScope) ? stored.activeUnlockScope : "";
+  }
   const unlockUntil = currentUnlockUntil;
   statusText.textContent = statusLabel({
     isEnabled: enabled.checked,
-    unlockUntil
+    unlockUntil,
+    activeUnlockScope: currentActiveUnlockScope
   });
   statusCard.dataset.state = statusState({ isEnabled: enabled.checked, unlockUntil });
   pinLabel.textContent = hasPin ? msg("changePinOptional") : msg("setPin");
   pinHelp.textContent = hasPin ? msg("pinHelpExisting") : msg("pinHelpRequired");
   lockNow.disabled = !enabled.checked || !hasPin;
   updateAreaCount();
-  updateAccent();
 }
 
 async function loadState() {
-  const stored = await chrome.storage.local.get(["enabled", "language", "accentTheme", "detectedAccentColor", "protectedAreas", "pinHash", "unlockUntil"]);
+  const stored = await chrome.storage.local.get(["enabled", "language", "accentTheme", "protectedAreas", "pinHash", "unlockDurationMinutes", "unlockScope", "unlockUntil", "activeUnlockScope"]);
   hasPin = Boolean(stored.pinHash);
   currentUnlockUntil = Number(stored.unlockUntil) || 0;
+  currentActiveUnlockScope = ["item", "all"].includes(stored.activeUnlockScope) ? stored.activeUnlockScope : "";
   enabled.checked = Boolean(stored.enabled);
   language.value = stored.language || "auto";
   const areas = { ...DEFAULT_AREAS, ...(stored.protectedAreas || {}) };
   areaInputs.forEach((input) => { input.checked = Boolean(areas[input.dataset.area]); });
-  detectedAccentColor = validCssColor(stored.detectedAccentColor) ? stored.detectedAccentColor : "";
-  const storedAccent = ["chatgpt", "indigo", "emerald", "rose"].includes(stored.accentTheme) ? stored.accentTheme : "chatgpt";
+  unlockDuration.value = String(Math.min(120, Math.max(1, Number(stored.unlockDurationMinutes) || 5)));
+  unlockScope.value = ["item", "all"].includes(stored.unlockScope) ? stored.unlockScope : "item";
+  const storedAccent = ["indigo", "emerald", "rose"].includes(stored.accentTheme) ? stored.accentTheme : "indigo";
   accentInputs.forEach((input) => { input.checked = input.value === storedAccent; });
   versionText.textContent = `v${chrome.runtime.getManifest().version}`;
   updateCopy(stored);
 
   clearInterval(statusTimer);
   statusTimer = setInterval(async () => {
-    const latest = await chrome.storage.local.get(["unlockUntil"]);
+    const latest = await chrome.storage.local.get(["unlockUntil", "activeUnlockScope"]);
     updateCopy(latest);
   }, 1000);
 }
@@ -315,10 +330,18 @@ enabled.addEventListener("change", async () => {
     hasPin = true;
     pin.value = "";
     currentUnlockUntil = 0;
+    currentActiveUnlockScope = "";
     await chrome.storage.local.set({
       ...pinRecord,
       enabled: true,
-      unlockUntil: 0
+      language: language.value,
+      accentTheme: selectedAccent(),
+      protectedAreas: selectedAreas(),
+      unlockDurationMinutes: selectedDurationMinutes(),
+      unlockScope: unlockScope.value,
+      unlockUntil: 0,
+      activeUnlockScope: "",
+      unlockedItemKey: ""
     });
     updateCopy({ unlockUntil: 0 });
     await notifyActiveChatGPT();
@@ -326,15 +349,18 @@ enabled.addEventListener("change", async () => {
   }
 
   currentUnlockUntil = 0;
+  currentActiveUnlockScope = "";
   await chrome.storage.local.set({
     enabled: enabled.checked,
-    unlockUntil: 0
+    unlockUntil: 0,
+    activeUnlockScope: "",
+    unlockedItemKey: ""
   });
   updateCopy({ unlockUntil: 0 });
   await notifyActiveChatGPT();
 });
 areaInputs.forEach((input) => input.addEventListener("change", updateAreaCount));
-accentInputs.forEach((input) => input.addEventListener("change", updateAccent));
+unlockDuration.addEventListener("change", selectedDurationMinutes);
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -360,7 +386,9 @@ form.addEventListener("submit", async (event) => {
     enabled: enabled.checked,
     language: language.value,
     accentTheme: selectedAccent(),
-    protectedAreas: selectedAreas()
+    protectedAreas: selectedAreas(),
+    unlockDurationMinutes: selectedDurationMinutes(),
+    unlockScope: ["item", "all"].includes(unlockScope.value) ? unlockScope.value : "item"
   };
   if (newPin) {
     Object.assign(updates, await createPinRecord(newPin));
@@ -368,7 +396,11 @@ form.addEventListener("submit", async (event) => {
     pin.value = "";
   }
 
-  if (!enabled.checked) updates.unlockUntil = 0;
+  if (!enabled.checked) {
+    updates.unlockUntil = 0;
+    updates.activeUnlockScope = "";
+    updates.unlockedItemKey = "";
+  }
 
   await chrome.storage.local.set(updates);
   updateCopy(updates);
@@ -388,8 +420,9 @@ lockNow.addEventListener("click", async () => {
     return;
   }
 
-  await chrome.storage.local.set({ enabled: true, unlockUntil: 0 });
+  await chrome.storage.local.set({ enabled: true, unlockUntil: 0, activeUnlockScope: "", unlockedItemKey: "" });
   currentUnlockUntil = 0;
+  currentActiveUnlockScope = "";
   statusCard.dataset.state = "locked";
   statusText.textContent = msg("statusLockedNow");
   await notifyActiveChatGPT();

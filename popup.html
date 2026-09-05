@@ -74,15 +74,25 @@
             <small data-i18n="languageHelp">Auto follows Chrome's language.</small>
           </label>
 
+          <label class="cpl-field-label" for="unlock-duration">
+            <span data-i18n="unlockDuration">Unlock time</span>
+            <input id="unlock-duration" type="number" min="1" max="120" step="1" value="5" inputmode="numeric" />
+            <small data-i18n="unlockDurationHelp">1–120 minutes.</small>
+          </label>
+
+          <label class="cpl-field-label" for="unlock-scope">
+            <span data-i18n="unlockScope">Unlock scope</span>
+            <select id="unlock-scope">
+              <option value="item" data-i18n="unlockScopeItem">Clicked item only</option>
+              <option value="all" data-i18n="unlockScopeAll">Entire sidebar</option>
+            </select>
+            <small data-i18n="unlockScopeHelp">Choose what a correct PIN reveals.</small>
+          </label>
+
           <fieldset class="cpl-color-fieldset">
             <legend data-i18n="accentColor">Mask glass tint</legend>
             <label class="cpl-color-option">
-              <input type="radio" name="accent-theme" value="chatgpt" checked />
-              <span class="cpl-color-swatch cpl-color-chatgpt" aria-hidden="true"></span>
-              <span data-i18n="colorChatGPT">Follow ChatGPT</span>
-            </label>
-            <label class="cpl-color-option">
-              <input type="radio" name="accent-theme" value="indigo" />
+              <input type="radio" name="accent-theme" value="indigo" checked />
               <span class="cpl-color-swatch cpl-color-indigo" aria-hidden="true"></span>
               <span data-i18n="colorIndigo">Indigo</span>
             </label>

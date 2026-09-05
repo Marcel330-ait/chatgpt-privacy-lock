@@ -9,16 +9,19 @@
 - [ ] Confirm Search chats, Library, Pinned, Projects, and previous chats are masked when locked.
 - [ ] Confirm each protected-area checkbox only hides that selected area.
 - [ ] Confirm language selection works in Auto, Chinese, and English.
-- [ ] Confirm Follow ChatGPT detects the current accent and changes only the protected-row glass tint.
-- [ ] Confirm Indigo, Emerald, and Rose manual tints change the masks without recoloring the popup, badge, or PIN dialog.
+- [ ] Confirm Indigo, Emerald, and Rose tints change the masks without recoloring the popup, badge, or PIN dialog.
+- [ ] Confirm a custom unlock duration from 1–120 minutes is respected.
+- [ ] Confirm Clicked item only opens and navigates to that item while other protected rows stay locked.
+- [ ] Confirm Entire sidebar reveals every protected row until the timer ends.
+- [ ] Confirm switching tabs or windows does not end an unlock session early.
+- [ ] Confirm Search, Library, Pinned, Projects, and Chats directory labels remain readable while protected.
 - [ ] Confirm protected rows use strong blur and translucent glass without exposing readable sidebar text.
 - [ ] Confirm clicking a masked area opens the PIN modal.
-- [ ] Confirm correct PIN unlocks for 5 minutes.
+- [ ] Confirm correct PIN unlocks for the configured duration.
 - [ ] Confirm incorrect PIN shows an error and repeated failures trigger cooldown.
 - [ ] Confirm Lock Now immediately locks the sidebar again.
 - [ ] Confirm the master switch immediately enables and disables masking without a reload.
 - [ ] Confirm Save settings immediately applies protected-area and glass-tint changes without a reload.
-- [ ] Confirm switching tabs or window focus re-locks after a temporary unlock.
 - [ ] Confirm the extension works in both dark and light ChatGPT themes.
 - [ ] Confirm narrow-window/sidebar-collapsed states do not break the active chat.
 - [ ] Confirm the PIN dialog fits a 360 px-wide mobile web viewport and touch targets remain usable.

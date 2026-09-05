@@ -1,12 +1,20 @@
 # Changelog / 更新日志
 
+## 1.4.0 — 2026-09-05
+
+- Added three compact mask-glass tints: Indigo, Emerald, and Rose.
+- Added a user-defined unlock duration from 1 to 120 minutes.
+- Added two unlock scopes: only the clicked item, or the entire sidebar.
+- Unlock sessions now remain open when switching tabs or windows and close only when their timer expires or Lock Now is used.
+- Keeps public directory labels such as Search, Library, Pinned, Projects, and Chats readable while still requiring a PIN when protected.
+- Reduced observer work, removed animated row effects, and lowered expensive backdrop blur to improve PIN-entry responsiveness.
+
 ## 1.3.0 — 2026-09-05
 
 - Redesigned the popup around a clearer protection-status card and compact settings panels.
 - Reworked protected sidebar rows into translucent, strongly blurred liquid-glass masks.
-- Added mask-glass tint choices: Follow ChatGPT, Indigo, Emerald, and Rose.
-- Detects ChatGPT's current accent locally and applies it only to the privacy masks; the popup and PIN dialog keep a consistent neutral glass design.
-- Added a responsive, touch-friendly PIN dialog for narrow mobile web layouts.
+- Introduced the first glass-tint controls, including an experimental Follow ChatGPT option later simplified in 1.4.0.
+- Added a responsive, touch-friendly PIN dialog for narrow web layouts.
 - Improved mobile sidebar detection and Simplified Chinese landmark matching.
 - Added privacy-preserving links for voluntary feedback and honest store reviews.
 - Added clearer local-only privacy copy and extension version information.
