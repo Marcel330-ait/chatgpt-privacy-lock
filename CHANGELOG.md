@@ -1,5 +1,19 @@
 # Changelog / 更新日志
 
+## 1.3.0 — 2026-09-05
+
+- Redesigned the popup around a clearer protection-status card and compact settings panels.
+- Reworked protected sidebar rows into translucent, strongly blurred liquid-glass masks.
+- Added mask-glass tint choices: Follow ChatGPT, Indigo, Emerald, and Rose.
+- Detects ChatGPT's current accent locally and applies it only to the privacy masks; the popup and PIN dialog keep a consistent neutral glass design.
+- Added a responsive, touch-friendly PIN dialog for narrow mobile web layouts.
+- Improved mobile sidebar detection and Simplified Chinese landmark matching.
+- Added privacy-preserving links for voluntary feedback and honest store reviews.
+- Added clearer local-only privacy copy and extension version information.
+- Made the master protection switch apply or remove masking immediately.
+- Added direct popup-to-page refresh messaging so Save settings and Lock Now no longer require a page reload.
+- Replaced the extension icon with Marcel's blue liquid-glass privacy-lock artwork.
+
 ## 1.2.1 — 2026-06-25
 
 - Reworked the locked sidebar visual effect from floating mask overlays to stable in-row skeleton masks.

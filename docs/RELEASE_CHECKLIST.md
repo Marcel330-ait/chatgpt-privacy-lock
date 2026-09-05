@@ -9,13 +9,20 @@
 - [ ] Confirm Search chats, Library, Pinned, Projects, and previous chats are masked when locked.
 - [ ] Confirm each protected-area checkbox only hides that selected area.
 - [ ] Confirm language selection works in Auto, Chinese, and English.
+- [ ] Confirm Follow ChatGPT detects the current accent and changes only the protected-row glass tint.
+- [ ] Confirm Indigo, Emerald, and Rose manual tints change the masks without recoloring the popup, badge, or PIN dialog.
+- [ ] Confirm protected rows use strong blur and translucent glass without exposing readable sidebar text.
 - [ ] Confirm clicking a masked area opens the PIN modal.
 - [ ] Confirm correct PIN unlocks for 5 minutes.
 - [ ] Confirm incorrect PIN shows an error and repeated failures trigger cooldown.
 - [ ] Confirm Lock Now immediately locks the sidebar again.
+- [ ] Confirm the master switch immediately enables and disables masking without a reload.
+- [ ] Confirm Save settings immediately applies protected-area and glass-tint changes without a reload.
 - [ ] Confirm switching tabs or window focus re-locks after a temporary unlock.
 - [ ] Confirm the extension works in both dark and light ChatGPT themes.
 - [ ] Confirm narrow-window/sidebar-collapsed states do not break the active chat.
+- [ ] Confirm the PIN dialog fits a 360 px-wide mobile web viewport and touch targets remain usable.
+- [ ] Confirm feedback and review links open the expected pages and are not shown as mandatory.
 
 ## Chrome Web Store assets / Chrome 商店素材
 

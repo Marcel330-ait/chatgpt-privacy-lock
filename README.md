@@ -12,7 +12,7 @@
 
 | 中文 | English |
 | --- | --- |
-| 遮罩/模糊会暴露历史记录的侧边栏区域 | Masks sidebar areas that reveal history or project names |
+| 使用半透明液态玻璃遮挡并强模糊会暴露历史记录的侧边栏区域 | Uses translucent liquid-glass masks with strong blur on sensitive sidebar areas |
 | 当前聊天、输入框、发送按钮保持可用 | Keeps the active chat, composer, and send button usable |
 | PIN 正确后临时解锁 5 分钟 | Unlocks for 5 minutes after a correct PIN |
 | 切换页面或窗口失焦时自动重新锁定 | Re-locks when the page is hidden or the window loses focus |
@@ -20,6 +20,10 @@
 | 错误 PIN 多次后进入短暂冷却 | Adds a short cooldown after repeated incorrect PIN attempts |
 | 可手动选择 Auto / 中文 / English | Lets users choose Auto / Chinese / English manually |
 | 可选择隐藏 Search、Library、Pinned、Projects、Chats | Lets users choose which sidebar areas to hide |
+| 遮挡玻璃可跟随 ChatGPT Accent color，也可选择蓝紫、翡翠或玫瑰 | Mask glass follows ChatGPT's accent or uses Indigo, Emerald, or Rose |
+| PIN 弹窗支持窄屏网页和触摸操作 | Makes the PIN dialog responsive and touch-friendly |
+| 可自愿提交反馈或留下真实评价 | Provides optional feedback and honest-review links |
+| 开启、关闭、保存和立即锁定无需刷新页面 | Applies enable, disable, save, and Lock Now actions without reloading ChatGPT |
 
 ## 工作原理 / How it works
 
@@ -75,15 +79,19 @@ flowchart LR
    **English**: Choose a language: **Auto / 中文 / English**.
 5. **中文**：勾选你想隐藏的侧边栏区域：Search chats、Library、Pinned chats、Projects、Previous chats。<br>
    **English**: Select the sidebar areas you want to hide: Search chats, Library, Pinned chats, Projects, Previous chats.
-6. **中文**：点击 **保存设置 / Save settings**。<br>
+6. **中文**：选择遮挡玻璃颜色：**跟随 ChatGPT / 蓝紫 / 翡翠 / 玫瑰**。“跟随 ChatGPT”会读取 ChatGPT 的 Accent color；它只改变遮挡玻璃，不会改变扩展面板。<br>
+   **English**: Choose a mask-glass tint: **Follow ChatGPT / Indigo / Emerald / Rose**. Follow ChatGPT reads ChatGPT's Accent color and changes only the privacy masks, not the popup UI.
+7. **中文**：点击 **保存设置 / Save settings**。<br>
    **English**: Click **Save settings**.
-7. **中文**：刷新 ChatGPT 页面，或在 `chrome://extensions` 里重载扩展后再刷新页面。<br>
+8. **中文**：刷新 ChatGPT 页面，或在 `chrome://extensions` 里重载扩展后再刷新页面。<br>
    **English**: Refresh ChatGPT, or reload the extension in `chrome://extensions` and then refresh the page.
 
 ## 日常使用 / Daily use
 
 - **中文**：锁定时会显示 **🔒 History locked / 历史已锁定**，侧边栏历史区域会被遮罩。<br>
   **English**: When locked, **🔒 History locked** appears and sidebar history areas are masked.
+- **中文**：遮挡层采用强模糊的半透明玻璃效果；选择“跟随 ChatGPT”后，更改 ChatGPT 的 Accent color 会同步改变玻璃色调。<br>
+  **English**: Masks use a strongly blurred translucent-glass effect; with Follow ChatGPT selected, changing ChatGPT's Accent color updates the glass tint.
 - **中文**：点击被保护区域会弹出 PIN 输入框。PIN 正确后，侧边栏解锁 5 分钟。<br>
   **English**: Clicking a protected area opens a PIN dialog. A correct PIN unlocks the sidebar for 5 minutes.
 - **中文**：点击弹窗里的 **Lock Now / 立即锁定** 可以马上重新锁定。<br>
@@ -92,6 +100,12 @@ flowchart LR
   **English**: Switching tabs, hiding the page, or losing window focus re-locks the sidebar.
 - **中文**：如果你只想隐藏 Projects 或 Previous chats，可以在弹窗里取消其它区域。<br>
   **English**: If you only want to hide Projects or Previous chats, uncheck the other areas in the popup.
+- **中文**：主开关会立即锁定或取消保护；保存设置和立即锁定也会直接更新当前 ChatGPT 页面。<br>
+  **English**: The master switch immediately enables or removes protection; Save settings and Lock Now also update the current ChatGPT page directly.
+- **中文**：只有在安装或重新加载扩展后的第一个旧标签页需要刷新一次，以载入新版内容脚本。<br>
+  **English**: An already-open tab only needs one refresh after installing or reloading the extension so it can load the new content script.
+- **中文**：弹窗底部可以自愿提交反馈或留下真实评价，不会自动收集使用数据。<br>
+  **English**: The popup footer provides optional feedback and honest-review links without collecting usage analytics.
 
 ## 文件结构 / Project structure
 
@@ -99,7 +113,7 @@ flowchart LR
 | --- | --- | --- |
 | `manifest.json` | Manifest V3 配置、权限、图标和 ChatGPT 匹配范围 | MV3 config, permissions, icons, and ChatGPT match patterns |
 | `content.js` | 侧边栏识别、按区域遮罩、点击拦截、PIN 验证、自动锁定 | Sidebar detection, per-area masking, click interception, PIN verification, auto lock |
-| `popup.html` / `popup.js` | 扩展弹窗、PIN 设置、语言选择、隐藏范围、倒计时状态、立即锁定 | Popup, PIN setup, language picker, protected-area choices, countdown status, Lock Now |
+| `popup.html` / `popup.js` | 扩展弹窗、PIN 设置、语言与主题选择、隐藏范围、倒计时状态、立即锁定 | Popup, PIN setup, language and theme picker, protected-area choices, countdown status, Lock Now |
 | `styles.css` | 遮罩、徽章、弹窗和弹窗 UI 样式 | Mask, badge, modal, and popup styles |
 | `_locales/` | 中英双语文案 | Chinese/English localization strings |
 | `PRIVACY_POLICY.md` | 隐私政策草案 | Privacy policy draft |

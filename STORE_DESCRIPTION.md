@@ -12,12 +12,15 @@ The active conversation stays usable. Your current chat, message input, and send
 
 Key features:
 
-- Masks ChatGPT sidebar history areas while locked.
+- Masks ChatGPT sidebar history areas with a strongly blurred translucent-glass effect while locked.
 - Opens a clean PIN modal when protected sidebar areas are clicked.
 - Temporarily unlocks the sidebar for 5 minutes after the correct PIN.
 - Re-locks automatically after the timer ends, when the page is hidden, or when the window loses focus.
+- Applies enable, disable, Save settings, and Lock Now actions immediately without reloading ChatGPT.
 - Lets users choose Auto, Chinese, or English manually.
 - Lets users choose which sidebar areas to hide: Search chats, Library, Pinned chats, Projects, and Previous chats.
+- Lets the mask glass follow ChatGPT's current accent automatically, with Indigo, Emerald, and Rose manual tints. The popup UI remains neutral.
+- Includes a redesigned status-focused popup and a touch-friendly PIN dialog for narrow web layouts.
 - Stores settings locally with `chrome.storage.local`.
 - Stores PIN-derived data locally using PBKDF2 with a random salt.
 - Does not collect or upload chat content.
@@ -41,8 +44,11 @@ ChatGPT Privacy Lock 通过遮罩 ChatGPT 侧边栏中可能暴露隐私的区�
 - 点击受保护区域时显示简洁 PIN 弹窗。
 - PIN 正确后临时解锁 5 分钟。
 - 计时结束、页面隐藏或窗口失焦后自动重新锁定。
+- 开启、关闭、保存设置和立即锁定都会直接生效，无需刷新 ChatGPT。
 - 可手动选择自动、中文或英文界面。
 - 可选择隐藏哪些侧边栏区域：搜索聊天、资料库、置顶聊天、项目、历史聊天。
+- 遮挡玻璃可自动跟随 ChatGPT 当前 Accent color，也可手动选择蓝紫、翡翠或玫瑰；扩展面板保持中性色。
+- 使用以保护状态为核心的新弹窗，并让 PIN 弹窗适配窄屏网页和触摸操作。
 - 使用 `chrome.storage.local` 在本地保存设置。
 - 使用 PBKDF2 + 随机 salt 在本地保存 PIN 派生数据。
 - 不收集、不上传聊天内容。

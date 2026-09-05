@@ -8,6 +8,11 @@
   const PIN_ITERATIONS = 150000;
   const MAX_FAILED_ATTEMPTS = 5;
   const COOLDOWN_MS = 30 * 1000;
+  const MASK_TINTS = {
+    indigo: "#7188f7",
+    emerald: "#42b883",
+    rose: "#e26d8d"
+  };
 
   const DEFAULT_AREAS = {
     search: true,
@@ -21,8 +26,10 @@
     en: {
       historyLockedBadge: "🔒 History locked",
       sidebarItemLocked: "Locked",
+      modalEyebrow: "Private by design",
       pinModalTitle: "History locked",
       pinModalDescription: "Enter your PIN to unlock sidebar history for 5 minutes.",
+      localOnly: "Your PIN protection stays on this device.",
       pinLabelShort: "PIN",
       unlockForFiveMinutes: "Unlock for 5 minutes",
       incorrectPin: "Incorrect PIN",
@@ -34,8 +41,10 @@
     zh_CN: {
       historyLockedBadge: "🔒 历史已锁定",
       sidebarItemLocked: "已锁定",
+      modalEyebrow: "隐私优先设计",
       pinModalTitle: "历史已锁定",
       pinModalDescription: "输入 PIN 后，侧边栏历史将解锁 5 分钟。",
+      localOnly: "PIN 保护数据仅保存在此设备。",
       pinLabelShort: "PIN",
       unlockForFiveMinutes: "解锁 5 分钟",
       incorrectPin: "PIN 错误",
@@ -51,6 +60,8 @@
   let settings = {
     enabled: false,
     language: "auto",
+    accentTheme: "chatgpt",
+    detectedAccentColor: "",
     protectedAreas: { ...DEFAULT_AREAS },
     pinHash: "",
     pinSalt: "",
@@ -82,6 +93,8 @@
     chrome.storage.local.get([
       "enabled",
       "language",
+      "accentTheme",
+      "detectedAccentColor",
       "protectedAreas",
       "pinHash",
       "pinSalt",
@@ -94,6 +107,8 @@
       settings = {
         enabled: Boolean(stored.enabled),
         language: stored.language || "auto",
+        accentTheme: ["chatgpt", "indigo", "emerald", "rose"].includes(stored.accentTheme) ? stored.accentTheme : "chatgpt",
+        detectedAccentColor: validCssColor(stored.detectedAccentColor) ? stored.detectedAccentColor : "",
         protectedAreas: { ...DEFAULT_AREAS, ...(stored.protectedAreas || {}) },
         pinHash: stored.pinHash || "",
         pinSalt: stored.pinSalt || "",
@@ -110,6 +125,46 @@
   const hasPin = () => Boolean(settings.pinHash);
   const isUnlocked = () => settings.enabled && settings.unlockUntil > Date.now();
   const isLocked = () => settings.enabled && !isUnlocked();
+
+  function validCssColor(value) {
+    return typeof value === "string" &&
+      value.length < 100 &&
+      /^(#|rgba?\(|hsla?\(|oklch\(|oklab\(|lch\(|lab\(|color\()/i.test(value.trim()) &&
+      CSS.supports("color", value.trim());
+  }
+
+  function detectChatGPTAccent() {
+    const rootStyle = getComputedStyle(document.documentElement);
+    const bodyStyle = document.body ? getComputedStyle(document.body) : null;
+    const names = [
+      "--button-accent-theme-background-color-default",
+      "--theme-content-accent",
+      "--button-accent-background-color-default",
+      "--accent-blue"
+    ];
+    for (const name of names) {
+      const value = (rootStyle.getPropertyValue(name) || bodyStyle?.getPropertyValue(name) || "").trim();
+      if (validCssColor(value)) return value;
+    }
+    return "";
+  }
+
+  function syncDetectedAccent() {
+    if (settings.accentTheme !== "chatgpt") return false;
+    const detected = detectChatGPTAccent();
+    if (!detected || detected === settings.detectedAccentColor) return false;
+    settings.detectedAccentColor = detected;
+    chrome.storage.local.set({ detectedAccentColor: detected });
+    return true;
+  }
+
+  function applyMaskTint() {
+    const detected = validCssColor(settings.detectedAccentColor) ? settings.detectedAccentColor : "";
+    const tint = settings.accentTheme === "chatgpt"
+      ? (detected || MASK_TINTS.indigo)
+      : (MASK_TINTS[settings.accentTheme] || MASK_TINTS.indigo);
+    document.documentElement.style.setProperty("--cpl-mask-accent", tint);
+  }
 
   function queueRefresh() {
     if (refreshQueued) return;
@@ -129,14 +184,14 @@
       if (element.closest('[role="dialog"]')) return false;
       const rect = element.getBoundingClientRect();
       return rect.width >= 140 &&
-        rect.width < 500 &&
+        rect.width <= Math.min(500, window.innerWidth + 2) &&
         rect.height >= Math.min(300, window.innerHeight * 0.45) &&
         rect.left < window.innerWidth * 0.45;
     };
 
     const hasSidebarLandmarks = (element) => {
       const text = getText(element).toLowerCase();
-      return ["new chat", "search chats", "pinned", "projects"]
+      return ["new chat", "search chats", "pinned", "projects", "新建聊天", "搜索聊天", "置顶", "项目"]
         .filter((landmark) => text.includes(landmark)).length >= 2;
     };
 
@@ -147,7 +202,7 @@
     if (semanticHost) return semanticHost;
 
     const landmarkControls = [...document.querySelectorAll('a, button, [role="button"], [role="link"]')]
-      .filter((element) => /^(new chat|search chats)$/i.test(getText(element)));
+      .filter((element) => /^(new chat|search chats|新建聊天|搜索聊天)$/i.test(getText(element)));
     let landmarkHost = null;
     for (const control of landmarkControls) {
       let ancestor = control.parentElement;
@@ -176,7 +231,9 @@
     if (host?.contains(element)) return true;
 
     const rect = element.getBoundingClientRect();
-    const maxRight = Math.min(430, window.innerWidth * 0.32);
+    const maxRight = window.innerWidth <= 640
+      ? Math.min(500, window.innerWidth + 2)
+      : Math.min(430, window.innerWidth * 0.32);
     return rect.width > 0 && rect.height > 0 && rect.left >= -2 && rect.right <= maxRight;
   }
 
@@ -254,9 +311,10 @@
       badge = document.createElement("div");
       badge.className = "cpl-sidebar-badge";
       badge.dataset.cplBadge = "true";
+      badge.innerHTML = '<span class="cpl-lock-glyph" aria-hidden="true"></span><span data-cpl-badge-label></span>';
       document.body.append(badge);
     }
-    badge.textContent = msg("historyLockedBadge");
+    badge.querySelector("[data-cpl-badge-label]").textContent = msg("historyLockedBadge").replace(/^🔒\s*/, "");
 
     if (host) {
       const rect = host.getBoundingClientRect();
@@ -269,12 +327,13 @@
   }
 
   function refreshProtection() {
+    syncDetectedAccent();
+    applyMaskTint();
     sidebarHost = getSidebarHost();
     document.querySelectorAll(".cpl-protected-item").forEach((item) => {
       item.classList.remove("cpl-protected-item");
       item.removeAttribute("data-cpl-protected");
       item.removeAttribute("data-cpl-category");
-      item.removeAttribute("data-cpl-mask-label");
     });
 
     if (settings.enabled) {
@@ -287,7 +346,6 @@
           item.classList.add("cpl-protected-item");
           item.dataset.cplProtected = "true";
           item.dataset.cplCategory = category;
-          item.dataset.cplMaskLabel = msg("sidebarItemLocked");
         }
       });
     }
@@ -435,17 +493,23 @@
     modal.className = "cpl-modal-backdrop";
     modal.dataset.cplModal = "true";
     modal.innerHTML = `
-      <section class="cpl-pin-modal" role="dialog" aria-modal="true" aria-labelledby="cpl-pin-title">
+      <section class="cpl-pin-modal" role="dialog" aria-modal="true" aria-labelledby="cpl-pin-title" aria-describedby="cpl-pin-description">
         <button class="cpl-modal-close" type="button" aria-label="${escapeHtml(msg("close"))}">×</button>
-        <div class="cpl-modal-icon" aria-hidden="true">🔒</div>
-        <h2 id="cpl-pin-title">${escapeHtml(msg("pinModalTitle"))}</h2>
-        <p>${escapeHtml(msg("pinModalDescription"))}</p>
+        <div class="cpl-modal-brand">
+          <div class="cpl-modal-icon" aria-hidden="true"><span class="cpl-lock-glyph"></span></div>
+          <div>
+            <p class="cpl-modal-eyebrow">${escapeHtml(msg("modalEyebrow"))}</p>
+            <h2 id="cpl-pin-title">${escapeHtml(msg("pinModalTitle"))}</h2>
+          </div>
+        </div>
+        <p id="cpl-pin-description">${escapeHtml(msg("pinModalDescription"))}</p>
         <form>
           <label for="cpl-pin-input">${escapeHtml(msg("pinLabelShort"))}</label>
           <input id="cpl-pin-input" type="password" inputmode="numeric" autocomplete="off" maxlength="32" required />
           <div class="cpl-pin-error" aria-live="polite"></div>
           <button class="cpl-unlock-button" type="submit">${escapeHtml(msg("unlockForFiveMinutes"))}</button>
         </form>
+        <p class="cpl-modal-local-note">${escapeHtml(msg("localOnly"))}</p>
       </section>`;
     document.body.append(modal);
 
@@ -541,10 +605,28 @@
   });
   window.addEventListener("blur", () => lockNow());
 
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (sender.id !== chrome.runtime.id ||
+        message?.source !== "chatgpt-privacy-lock-popup" ||
+        message?.action !== "refresh-protection") {
+      return;
+    }
+
+    readSettings()
+      .then(() => {
+        refreshProtection();
+        sendResponse({ ok: true });
+      })
+      .catch(() => sendResponse({ ok: false }));
+    return true;
+  });
+
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== "local") return;
     if (changes.enabled) settings.enabled = Boolean(changes.enabled.newValue);
     if (changes.language) settings.language = changes.language.newValue || "auto";
+    if (changes.accentTheme) settings.accentTheme = ["chatgpt", "indigo", "emerald", "rose"].includes(changes.accentTheme.newValue) ? changes.accentTheme.newValue : "chatgpt";
+    if (changes.detectedAccentColor) settings.detectedAccentColor = validCssColor(changes.detectedAccentColor.newValue) ? changes.detectedAccentColor.newValue : "";
     if (changes.protectedAreas) settings.protectedAreas = { ...DEFAULT_AREAS, ...(changes.protectedAreas.newValue || {}) };
     if (changes.pinHash) settings.pinHash = changes.pinHash.newValue || "";
     if (changes.pinSalt) settings.pinSalt = changes.pinSalt.newValue || "";
@@ -558,6 +640,9 @@
   });
 
   new MutationObserver(queueRefresh).observe(document.documentElement, { childList: true, subtree: true });
+  setInterval(() => {
+    if (syncDetectedAccent()) applyMaskTint();
+  }, 2000);
   window.addEventListener("resize", queueRefresh);
   window.addEventListener("scroll", queueRefresh, true);
 

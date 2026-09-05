@@ -16,13 +16,20 @@ const TEXT = {
   en: {
     extensionName: "ChatGPT Privacy Lock",
     popupTitle: "Privacy Lock",
-    popupSubtitle: "Protect ChatGPT sidebar history.",
+    popupSubtitle: "Keep sidebar details out of sight.",
+    privateByDesign: "Private by design",
+    protectionStatus: "Protection status",
     sidebarProtection: "Sidebar protection",
     languageLabel: "Language",
     languageAuto: "Auto",
     languageChinese: "中文",
     languageEnglish: "English",
     languageHelp: "Auto follows Chrome's language.",
+    accentColor: "Mask glass tint",
+    colorChatGPT: "Follow ChatGPT",
+    colorIndigo: "Indigo",
+    colorEmerald: "Emerald",
+    colorRose: "Rose",
     protectWhat: "Hide these sidebar areas",
     areaSearch: "Search chats",
     areaLibrary: "Library",
@@ -37,6 +44,9 @@ const TEXT = {
     pinHelpExisting: "Leave blank to keep your existing PIN.",
     saveSettings: "Save settings",
     lockNow: "Lock Now",
+    sendFeedback: "Send feedback",
+    rateHonestly: "Leave a review",
+    localOnly: "Settings and PIN protection stay on this device.",
     securityNote: "A privacy layer for shoulder-surfing and casual access—not account-level security.",
     statusOff: "Off",
     statusLocked: "Locked",
@@ -47,20 +57,27 @@ const TEXT = {
     statusSavedOff: "Off — saved",
     errorChoosePin: "Choose a PIN with at least 4 characters.",
     errorPinLength: "PIN must have at least 4 characters.",
-    errorSetPinBeforeLocking: "Set a PIN and save settings before locking.",
+    errorSetPinBeforeLocking: "Enter a PIN with at least 4 characters first.",
     errorTurnOnBeforeLocking: "Turn on sidebar protection before locking.",
     errorChooseArea: "Choose at least one sidebar area to hide."
   },
   zh_CN: {
     extensionName: "ChatGPT Privacy Lock",
     popupTitle: "隐私锁",
-    popupSubtitle: "保护 ChatGPT 侧边栏历史。",
+    popupSubtitle: "让侧边栏隐私信息远离旁人视线。",
+    privateByDesign: "隐私优先设计",
+    protectionStatus: "保护状态",
     sidebarProtection: "侧边栏保护",
     languageLabel: "语言",
     languageAuto: "自动",
     languageChinese: "中文",
     languageEnglish: "English",
     languageHelp: "自动模式会跟随 Chrome 语言。",
+    accentColor: "遮挡玻璃颜色",
+    colorChatGPT: "跟随 ChatGPT",
+    colorIndigo: "蓝紫",
+    colorEmerald: "翡翠",
+    colorRose: "玫瑰",
     protectWhat: "隐藏这些侧边栏区域",
     areaSearch: "搜索聊天",
     areaLibrary: "资料库",
@@ -75,6 +92,9 @@ const TEXT = {
     pinHelpExisting: "留空则保留当前 PIN。",
     saveSettings: "保存设置",
     lockNow: "立即锁定",
+    sendFeedback: "提交反馈",
+    rateHonestly: "留下评价",
+    localOnly: "设置和 PIN 保护数据仅保存在此设备。",
     securityNote: "这是防肩窥和临时借用电脑的隐私 UX 层，不是账号级安全措施。",
     statusOff: "关闭",
     statusLocked: "已锁定",
@@ -85,7 +105,7 @@ const TEXT = {
     statusSavedOff: "已关闭 — 已保存",
     errorChoosePin: "请选择至少 4 位字符的 PIN。",
     errorPinLength: "PIN 至少需要 4 位字符。",
-    errorSetPinBeforeLocking: "请先设置 PIN 并保存，再锁定。",
+    errorSetPinBeforeLocking: "请先输入至少 4 位字符的 PIN。",
     errorTurnOnBeforeLocking: "请先开启侧边栏保护。",
     errorChooseArea: "请至少选择一个要隐藏的侧边栏区域。"
   }
@@ -98,12 +118,18 @@ const pin = document.querySelector("#pin");
 const pinLabel = document.querySelector("#pin-label");
 const pinHelp = document.querySelector("#pin-help");
 const statusText = document.querySelector("#status-text");
+const statusCard = document.querySelector("#status-card");
+const areaCount = document.querySelector("#area-count");
+const versionText = document.querySelector("#version-text");
 const error = document.querySelector("#popup-error");
 const lockNow = document.querySelector("#lock-now");
 const areaInputs = [...document.querySelectorAll("[data-area]")];
+const accentInputs = [...document.querySelectorAll('[name="accent-theme"]')];
 
 let hasPin = false;
 let statusTimer;
+let currentUnlockUntil = 0;
+let detectedAccentColor = "";
 
 function currentLanguage() {
   if (language.value === "en" || language.value === "zh_CN") return language.value;
@@ -181,23 +207,81 @@ function hasSelectedArea() {
   return Object.values(selectedAreas()).some(Boolean);
 }
 
+function selectedAccent() {
+  return accentInputs.find((input) => input.checked)?.value || "chatgpt";
+}
+
+function updateAccent() {
+  const followSwatch = document.querySelector(".cpl-color-chatgpt");
+  if (!followSwatch) return;
+  followSwatch.style.removeProperty("background");
+  if (validCssColor(detectedAccentColor)) followSwatch.style.background = detectedAccentColor;
+}
+
+function validCssColor(value) {
+  return typeof value === "string" &&
+    value.length < 100 &&
+    /^(#|rgba?\(|hsla?\(|oklch\(|oklab\(|lch\(|lab\(|color\()/i.test(value.trim()) &&
+    CSS.supports("color", value.trim());
+}
+
+async function notifyActiveChatGPT() {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab?.id) return;
+    await chrome.tabs.sendMessage(tab.id, {
+      source: "chatgpt-privacy-lock-popup",
+      action: "refresh-protection"
+    });
+  } catch {
+    // The active page may not be ChatGPT, or the tab may still have an older
+    // content-script instance after an extension reload. Storage remains the
+    // source of truth and the next ChatGPT page load will apply the settings.
+  }
+}
+
+function updateAreaCount() {
+  const selected = areaInputs.filter((input) => input.checked).length;
+  areaCount.textContent = `${selected}/${areaInputs.length}`;
+}
+
+function statusState({ isEnabled, unlockUntil }) {
+  if (!isEnabled) return "off";
+  if (!hasPin) return "pin";
+  if (unlockUntil > Date.now()) return "unlocked";
+  return "locked";
+}
+
 function updateCopy(stored = {}) {
   localizeStaticText();
+  if (Object.prototype.hasOwnProperty.call(stored, "unlockUntil")) {
+    currentUnlockUntil = Number(stored.unlockUntil) || 0;
+  }
+  const unlockUntil = currentUnlockUntil;
   statusText.textContent = statusLabel({
     isEnabled: enabled.checked,
-    unlockUntil: Number(stored.unlockUntil) || 0
+    unlockUntil
   });
+  statusCard.dataset.state = statusState({ isEnabled: enabled.checked, unlockUntil });
   pinLabel.textContent = hasPin ? msg("changePinOptional") : msg("setPin");
   pinHelp.textContent = hasPin ? msg("pinHelpExisting") : msg("pinHelpRequired");
+  lockNow.disabled = !enabled.checked || !hasPin;
+  updateAreaCount();
+  updateAccent();
 }
 
 async function loadState() {
-  const stored = await chrome.storage.local.get(["enabled", "language", "protectedAreas", "pinHash", "unlockUntil"]);
+  const stored = await chrome.storage.local.get(["enabled", "language", "accentTheme", "detectedAccentColor", "protectedAreas", "pinHash", "unlockUntil"]);
   hasPin = Boolean(stored.pinHash);
+  currentUnlockUntil = Number(stored.unlockUntil) || 0;
   enabled.checked = Boolean(stored.enabled);
   language.value = stored.language || "auto";
   const areas = { ...DEFAULT_AREAS, ...(stored.protectedAreas || {}) };
   areaInputs.forEach((input) => { input.checked = Boolean(areas[input.dataset.area]); });
+  detectedAccentColor = validCssColor(stored.detectedAccentColor) ? stored.detectedAccentColor : "";
+  const storedAccent = ["chatgpt", "indigo", "emerald", "rose"].includes(stored.accentTheme) ? stored.accentTheme : "chatgpt";
+  accentInputs.forEach((input) => { input.checked = input.value === storedAccent; });
+  versionText.textContent = `v${chrome.runtime.getManifest().version}`;
   updateCopy(stored);
 
   clearInterval(statusTimer);
@@ -208,7 +292,49 @@ async function loadState() {
 }
 
 language.addEventListener("change", () => updateCopy());
-enabled.addEventListener("change", () => updateCopy());
+enabled.addEventListener("change", async () => {
+  error.textContent = "";
+  if (enabled.checked && !hasSelectedArea()) {
+    enabled.checked = false;
+    error.textContent = msg("errorChooseArea");
+    updateCopy({ unlockUntil: 0 });
+    return;
+  }
+
+  if (enabled.checked && !hasPin) {
+    const newPin = pin.value.trim();
+    if (newPin.length < 4) {
+      enabled.checked = false;
+      error.textContent = msg("errorSetPinBeforeLocking");
+      pin.focus();
+      updateCopy({ unlockUntil: 0 });
+      return;
+    }
+
+    const pinRecord = await createPinRecord(newPin);
+    hasPin = true;
+    pin.value = "";
+    currentUnlockUntil = 0;
+    await chrome.storage.local.set({
+      ...pinRecord,
+      enabled: true,
+      unlockUntil: 0
+    });
+    updateCopy({ unlockUntil: 0 });
+    await notifyActiveChatGPT();
+    return;
+  }
+
+  currentUnlockUntil = 0;
+  await chrome.storage.local.set({
+    enabled: enabled.checked,
+    unlockUntil: 0
+  });
+  updateCopy({ unlockUntil: 0 });
+  await notifyActiveChatGPT();
+});
+areaInputs.forEach((input) => input.addEventListener("change", updateAreaCount));
+accentInputs.forEach((input) => input.addEventListener("change", updateAccent));
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -233,6 +359,7 @@ form.addEventListener("submit", async (event) => {
   const updates = {
     enabled: enabled.checked,
     language: language.value,
+    accentTheme: selectedAccent(),
     protectedAreas: selectedAreas()
   };
   if (newPin) {
@@ -246,6 +373,7 @@ form.addEventListener("submit", async (event) => {
   await chrome.storage.local.set(updates);
   updateCopy(updates);
   statusText.textContent = enabled.checked ? msg("statusSavedOn") : msg("statusSavedOff");
+  await notifyActiveChatGPT();
 });
 
 lockNow.addEventListener("click", async () => {
@@ -261,7 +389,10 @@ lockNow.addEventListener("click", async () => {
   }
 
   await chrome.storage.local.set({ enabled: true, unlockUntil: 0 });
+  currentUnlockUntil = 0;
+  statusCard.dataset.state = "locked";
   statusText.textContent = msg("statusLockedNow");
+  await notifyActiveChatGPT();
 });
 
 loadState();
