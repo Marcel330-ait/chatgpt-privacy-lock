@@ -33,9 +33,9 @@ const TEXT = {
     unlockDuration: "Unlock time",
     unlockDurationHelp: "1–120 minutes.",
     unlockScope: "Unlock scope",
-    unlockScopeItem: "Clicked item only",
+    unlockScopeItem: "Clicked items (cumulative)",
     unlockScopeAll: "Entire sidebar",
-    unlockScopeHelp: "Choose what a correct PIN reveals.",
+    unlockScopeHelp: "Opened items stay visible together until the timer ends.",
     protectWhat: "Hide these sidebar areas",
     areaSearch: "Search chats",
     areaLibrary: "Library",
@@ -59,7 +59,7 @@ const TEXT = {
     statusLocked: "Locked",
     statusLockedNow: "Locked now",
     statusPinRequired: "PIN required",
-    statusUnlockedItemFor: "One item — $1",
+    statusUnlockedItemFor: "Selected items open — $1",
     statusUnlockedAllFor: "All unlocked — $1",
     statusSavedOn: "On — saved",
     statusSavedOff: "Off — saved",
@@ -88,9 +88,9 @@ const TEXT = {
     unlockDuration: "解锁时间",
     unlockDurationHelp: "可设置 1–120 分钟。",
     unlockScope: "解锁范围",
-    unlockScopeItem: "仅打开点击项",
+    unlockScopeItem: "已点击项（可累计）",
     unlockScopeAll: "打开全部侧边栏",
-    unlockScopeHelp: "选择 PIN 正确后显示哪些内容。",
+    unlockScopeHelp: "打开过的内容会一起保持显示，直到倒计时结束。",
     protectWhat: "隐藏这些侧边栏区域",
     areaSearch: "搜索聊天",
     areaLibrary: "资料库",
@@ -114,7 +114,7 @@ const TEXT = {
     statusLocked: "已锁定",
     statusLockedNow: "已立即锁定",
     statusPinRequired: "需要设置 PIN",
-    statusUnlockedItemFor: "单项已开 — $1",
+    statusUnlockedItemFor: "已选内容保持打开 — $1",
     statusUnlockedAllFor: "全部已开 — $1",
     statusSavedOn: "已开启 — 已保存",
     statusSavedOff: "已关闭 — 已保存",
@@ -345,7 +345,9 @@ enabled.addEventListener("change", async () => {
       unlockUntil: 0,
       activeUnlockScope: "",
       unlockedItemKey: "",
-      unlockedProjectIdentity: ""
+      unlockedProjectIdentity: "",
+      unlockedItemKeys: [],
+      unlockedProjectIdentities: []
     });
     updateCopy({ unlockUntil: 0 });
     await notifyActiveChatGPT();
@@ -359,7 +361,9 @@ enabled.addEventListener("change", async () => {
     unlockUntil: 0,
     activeUnlockScope: "",
     unlockedItemKey: "",
-    unlockedProjectIdentity: ""
+    unlockedProjectIdentity: "",
+    unlockedItemKeys: [],
+    unlockedProjectIdentities: []
   });
   updateCopy({ unlockUntil: 0 });
   await notifyActiveChatGPT();
@@ -406,6 +410,8 @@ form.addEventListener("submit", async (event) => {
     updates.activeUnlockScope = "";
     updates.unlockedItemKey = "";
     updates.unlockedProjectIdentity = "";
+    updates.unlockedItemKeys = [];
+    updates.unlockedProjectIdentities = [];
   }
 
   await chrome.storage.local.set(updates);
@@ -426,7 +432,15 @@ lockNow.addEventListener("click", async () => {
     return;
   }
 
-  await chrome.storage.local.set({ enabled: true, unlockUntil: 0, activeUnlockScope: "", unlockedItemKey: "", unlockedProjectIdentity: "" });
+  await chrome.storage.local.set({
+    enabled: true,
+    unlockUntil: 0,
+    activeUnlockScope: "",
+    unlockedItemKey: "",
+    unlockedProjectIdentity: "",
+    unlockedItemKeys: [],
+    unlockedProjectIdentities: []
+  });
   currentUnlockUntil = 0;
   currentActiveUnlockScope = "";
   statusCard.dataset.state = "locked";

@@ -1,5 +1,11 @@
 # Changelog / 更新日志
 
+## 1.4.5 — 2026-09-05
+
+- Changed item-only unlocking into a cumulative unlock session.
+- Previously unlocked Projects and chats now remain visible when another item is unlocked.
+- A new successful PIN entry extends the shared session timer; expiry or Lock Now clears every unlocked item together.
+
 ## 1.4.4 — 2026-09-05
 
 - Prevented unlocking one Project from revealing unrelated Projects in the same sidebar section.

@@ -27,7 +27,7 @@
       historyLockedBadge: "🔒 History locked",
       modalEyebrow: "Private by design",
       pinModalTitle: "History locked",
-      pinModalDescriptionItem: "Enter your PIN to open only this item for $1 minutes.",
+      pinModalDescriptionItem: "Enter your PIN to add this item to the current $1-minute unlock session.",
       pinModalDescriptionAll: "Enter your PIN to unlock the full sidebar for $1 minutes.",
       localOnly: "Your PIN protection stays on this device.",
       pinLabelShort: "PIN",
@@ -44,7 +44,7 @@
       historyLockedBadge: "🔒 历史已锁定",
       modalEyebrow: "隐私优先设计",
       pinModalTitle: "历史已锁定",
-      pinModalDescriptionItem: "输入 PIN 后，仅打开当前选择的项目 $1 分钟。",
+      pinModalDescriptionItem: "输入 PIN 后，将此条目加入当前 $1 分钟的解锁会话。",
       pinModalDescriptionAll: "输入 PIN 后，整个侧边栏将解锁 $1 分钟。",
       localOnly: "PIN 保护数据仅保存在此设备。",
       pinLabelShort: "PIN",
@@ -76,6 +76,8 @@
     activeUnlockScope: "",
     unlockedItemKey: "",
     unlockedProjectIdentity: "",
+    unlockedItemKeys: [],
+    unlockedProjectIdentities: [],
     failedPinAttempts: 0,
     pinCooldownUntil: 0
   };
@@ -115,9 +117,27 @@
       "activeUnlockScope",
       "unlockedItemKey",
       "unlockedProjectIdentity",
+      "unlockedItemKeys",
+      "unlockedProjectIdentities",
       "failedPinAttempts",
       "pinCooldownUntil"
     ], (stored) => {
+      const unlockUntil = Number(stored.unlockUntil) || 0;
+      const unlockIsActive = unlockUntil > Date.now();
+      const activeUnlockScope = unlockIsActive
+        ? (["item", "project", "all"].includes(stored.activeUnlockScope) ? stored.activeUnlockScope : "all")
+        : "";
+      const unlockedItemKeys = unlockIsActive && Array.isArray(stored.unlockedItemKeys)
+        ? stored.unlockedItemKeys.filter((key) => typeof key === "string" && key)
+        : [];
+      const unlockedProjectIdentities = unlockIsActive && Array.isArray(stored.unlockedProjectIdentities)
+        ? stored.unlockedProjectIdentities.filter((identity) => typeof identity === "string" && identity)
+        : [];
+      if (unlockIsActive && activeUnlockScope !== "all") {
+        if (stored.unlockedItemKey) unlockedItemKeys.push(stored.unlockedItemKey);
+        if (stored.unlockedProjectIdentity) unlockedProjectIdentities.push(stored.unlockedProjectIdentity);
+      }
+
       settings = {
         enabled: Boolean(stored.enabled),
         language: stored.language || "auto",
@@ -129,12 +149,12 @@
         pinVersion: Number(stored.pinVersion) || (stored.pinSalt ? 2 : 1),
         unlockDurationMinutes: Math.min(120, Math.max(1, Number(stored.unlockDurationMinutes) || 5)),
         unlockScope: ["item", "all"].includes(stored.unlockScope) ? stored.unlockScope : "item",
-        unlockUntil: Number(stored.unlockUntil) || 0,
-        activeUnlockScope: ["item", "project", "all"].includes(stored.activeUnlockScope)
-          ? stored.activeUnlockScope
-          : ((Number(stored.unlockUntil) || 0) > Date.now() ? "all" : ""),
+        unlockUntil,
+        activeUnlockScope,
         unlockedItemKey: stored.unlockedItemKey || "",
         unlockedProjectIdentity: stored.unlockedProjectIdentity || "",
+        unlockedItemKeys: [...new Set(unlockedItemKeys)],
+        unlockedProjectIdentities: [...new Set(unlockedProjectIdentities)],
         failedPinAttempts: Number(stored.failedPinAttempts) || 0,
         pinCooldownUntil: Number(stored.pinCooldownUntil) || 0
       };
@@ -342,11 +362,8 @@
   function itemLooksProtected(element) {
     const category = protectedCategory(element);
     if (!category || !settings.protectedAreas[category]) return false;
-    if (hasActiveUnlock() && settings.activeUnlockScope === "item") {
-      return protectedItemKey(element, category) !== settings.unlockedItemKey;
-    }
-    if (hasActiveUnlock() && settings.activeUnlockScope === "project") {
-      return !belongsToUnlockedProject(element, category);
+    if (hasActiveUnlock() && settings.activeUnlockScope !== "all") {
+      return !belongsToCurrentUnlockSession(element, category);
     }
     return true;
   }
@@ -380,10 +397,11 @@
     );
   }
 
-  function belongsToUnlockedProject(element, category = protectedCategory(element)) {
-    if (protectedItemKey(element, category) === settings.unlockedItemKey) return true;
+  function belongsToCurrentUnlockSession(element, category = protectedCategory(element)) {
+    const itemKey = protectedItemKey(element, category);
+    if (settings.unlockedItemKeys.includes(itemKey)) return true;
     const identity = projectIdentityFromElement(element);
-    return Boolean(identity && settings.unlockedProjectIdentity && identity === settings.unlockedProjectIdentity);
+    return Boolean(identity && settings.unlockedProjectIdentities.includes(identity));
   }
 
   function protectedItemKey(element, category = protectedCategory(element)) {
@@ -488,7 +506,16 @@
       settings.activeUnlockScope = "";
       settings.unlockedItemKey = "";
       settings.unlockedProjectIdentity = "";
-      await chrome.storage.local.set({ unlockUntil: 0, activeUnlockScope: "", unlockedItemKey: "", unlockedProjectIdentity: "" });
+      settings.unlockedItemKeys = [];
+      settings.unlockedProjectIdentities = [];
+      await chrome.storage.local.set({
+        unlockUntil: 0,
+        activeUnlockScope: "",
+        unlockedItemKey: "",
+        unlockedProjectIdentity: "",
+        unlockedItemKeys: [],
+        unlockedProjectIdentities: []
+      });
       refreshProtection();
     }, settings.unlockUntil - Date.now() + 50);
   }
@@ -702,11 +729,27 @@
       const targetCategory = target ? protectedCategory(target) : "";
       const isProjectUnlock = settings.unlockScope === "item" && targetKey &&
         (targetCategory === "projects" || looksLikeProjectItem(target));
-      settings.activeUnlockScope = settings.unlockScope === "item" && targetKey
-        ? (isProjectUnlock ? "project" : "item")
-        : "all";
-      settings.unlockedItemKey = settings.activeUnlockScope === "all" ? "" : targetKey;
-      settings.unlockedProjectIdentity = isProjectUnlock ? projectIdentityFromElement(target) : "";
+      const isItemSession = settings.unlockScope === "item" && targetKey;
+      const continuingItemSession = hasActiveUnlock() && settings.activeUnlockScope !== "all";
+      if (!continuingItemSession) {
+        settings.unlockedItemKeys = [];
+        settings.unlockedProjectIdentities = [];
+      }
+      settings.activeUnlockScope = isItemSession ? "item" : "all";
+      if (isItemSession) {
+        settings.unlockedItemKeys = [...new Set([...settings.unlockedItemKeys, targetKey])];
+        const projectIdentity = isProjectUnlock ? projectIdentityFromElement(target) : "";
+        settings.unlockedProjectIdentities = projectIdentity
+          ? [...new Set([...settings.unlockedProjectIdentities, projectIdentity])]
+          : settings.unlockedProjectIdentities;
+        settings.unlockedItemKey = targetKey;
+        settings.unlockedProjectIdentity = projectIdentity;
+      } else {
+        settings.unlockedItemKeys = [];
+        settings.unlockedProjectIdentities = [];
+        settings.unlockedItemKey = "";
+        settings.unlockedProjectIdentity = "";
+      }
       settings.unlockUntil = Date.now() + (settings.unlockDurationMinutes * 60 * 1000);
       await chrome.storage.local.set({
         failedPinAttempts: 0,
@@ -714,7 +757,9 @@
         unlockUntil: settings.unlockUntil,
         activeUnlockScope: settings.activeUnlockScope,
         unlockedItemKey: settings.unlockedItemKey,
-        unlockedProjectIdentity: settings.unlockedProjectIdentity
+        unlockedProjectIdentity: settings.unlockedProjectIdentity,
+        unlockedItemKeys: settings.unlockedItemKeys,
+        unlockedProjectIdentities: settings.unlockedProjectIdentities
       });
       stopCooldownTimer();
       closeModal();
@@ -772,6 +817,8 @@
     if (changes.activeUnlockScope) settings.activeUnlockScope = ["item", "project", "all"].includes(changes.activeUnlockScope.newValue) ? changes.activeUnlockScope.newValue : "";
     if (changes.unlockedItemKey) settings.unlockedItemKey = changes.unlockedItemKey.newValue || "";
     if (changes.unlockedProjectIdentity) settings.unlockedProjectIdentity = changes.unlockedProjectIdentity.newValue || "";
+    if (changes.unlockedItemKeys) settings.unlockedItemKeys = Array.isArray(changes.unlockedItemKeys.newValue) ? changes.unlockedItemKeys.newValue : [];
+    if (changes.unlockedProjectIdentities) settings.unlockedProjectIdentities = Array.isArray(changes.unlockedProjectIdentities.newValue) ? changes.unlockedProjectIdentities.newValue : [];
     if (changes.failedPinAttempts) settings.failedPinAttempts = Number(changes.failedPinAttempts.newValue) || 0;
     if (changes.pinCooldownUntil) settings.pinCooldownUntil = Number(changes.pinCooldownUntil.newValue) || 0;
     if (!settings.enabled || !isLocked() || (changes.unlockUntil && settings.unlockUntil <= Date.now())) closeModal();
