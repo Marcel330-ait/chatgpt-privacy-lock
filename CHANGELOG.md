@@ -1,5 +1,11 @@
 # Changelog / 更新日志
 
+## 1.4.4 — 2026-09-05
+
+- Prevented unlocking one Project from revealing unrelated Projects in the same sidebar section.
+- Removed the broad DOM-ancestor fallback that could treat the entire Projects list as one group.
+- Reapplies masks before the next browser paint after ChatGPT sidebar DOM changes to prevent reveal-and-relock flicker.
+
 ## 1.4.3 — 2026-09-05
 
 - Fixed project conversations being mislabeled as projects after expanding a project.

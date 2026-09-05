@@ -86,7 +86,7 @@
   let pendingProtectedItem;
   let badge;
   let sidebarHost;
-  let unlockedProjectElement;
+  let refreshMicrotaskQueued = false;
 
   function currentLanguage() {
     if (settings.language === "en" || settings.language === "zh_CN") return settings.language;
@@ -152,12 +152,24 @@
     document.documentElement.style.setProperty("--cpl-mask-accent", tint);
   }
 
-  function queueRefresh() {
+  function queueRefresh(beforePaint = false) {
     clearTimeout(refreshTimer);
+    refreshTimer = null;
+
+    if (beforePaint) {
+      if (refreshMicrotaskQueued) return;
+      refreshMicrotaskQueued = true;
+      queueMicrotask(() => {
+        refreshMicrotaskQueued = false;
+        refreshProtection();
+      });
+      return;
+    }
+
     refreshTimer = setTimeout(() => {
       refreshTimer = null;
       refreshProtection();
-    }, 80);
+    }, 40);
   }
 
   function getText(element) {
@@ -371,21 +383,7 @@
   function belongsToUnlockedProject(element, category = protectedCategory(element)) {
     if (protectedItemKey(element, category) === settings.unlockedItemKey) return true;
     const identity = projectIdentityFromElement(element);
-    if (identity && identity === settings.unlockedProjectIdentity) return true;
-
-    if (!unlockedProjectElement?.isConnected || !sidebarHost?.contains(unlockedProjectElement)) return false;
-    for (let ancestor = unlockedProjectElement.parentElement; ancestor && ancestor !== sidebarHost; ancestor = ancestor.parentElement) {
-      if (!ancestor.contains(element)) continue;
-      const identities = new Set(
-        [...ancestor.querySelectorAll("a[href]")]
-          .map(projectIdentityFromElement)
-          .filter(Boolean)
-      );
-      if (identities.size <= 1 && ancestor.querySelectorAll('a, button, [role="button"], [role="link"]').length <= 24) {
-        return true;
-      }
-    }
-    return false;
+    return Boolean(identity && settings.unlockedProjectIdentity && identity === settings.unlockedProjectIdentity);
   }
 
   function protectedItemKey(element, category = protectedCategory(element)) {
@@ -452,10 +450,6 @@
       ? [...sidebarHost.querySelectorAll('a, button, [role="button"], [role="link"]')]
       : [];
     const currentItems = new Set(clickableItems);
-    unlockedProjectElement = settings.activeUnlockScope === "project"
-      ? clickableItems.find((item) => protectedItemKey(item) === settings.unlockedItemKey) || null
-      : null;
-
     clickableItems.forEach((item) => {
       const category = protectedCategory(item);
       const shouldProtect = settings.enabled && category && settings.protectedAreas[category] && itemLooksProtected(item);
@@ -781,12 +775,12 @@
     if (changes.failedPinAttempts) settings.failedPinAttempts = Number(changes.failedPinAttempts.newValue) || 0;
     if (changes.pinCooldownUntil) settings.pinCooldownUntil = Number(changes.pinCooldownUntil.newValue) || 0;
     if (!settings.enabled || !isLocked() || (changes.unlockUntil && settings.unlockUntil <= Date.now())) closeModal();
-    queueRefresh();
+    queueRefresh(true);
   });
 
   new MutationObserver((mutations) => {
     if (!sidebarHost || !sidebarHost.isConnected) {
-      queueRefresh();
+      queueRefresh(true);
       return;
     }
     const sidebarChanged = mutations.some((mutation) => {
@@ -795,9 +789,9 @@
         node === sidebarHost || (node instanceof Element && node.contains(sidebarHost))
       );
     });
-    if (sidebarChanged) queueRefresh();
+    if (sidebarChanged) queueRefresh(true);
   }).observe(document.documentElement, { childList: true, subtree: true });
-  window.addEventListener("resize", queueRefresh);
+  window.addEventListener("resize", () => queueRefresh());
 
   readSettings().then(refreshProtection);
 })();
