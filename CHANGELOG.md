@@ -1,5 +1,10 @@
 # Changelog / 更新日志
 
+## 1.5.2 — 2026-09-05
+
+- Hides edit, rename, menu, share, archive, and other compact row actions while their Project or chat remains protected.
+- Restores a row's actions only after that specific row or Project is unlocked, eliminating duplicate mini glass masks beside protected rows.
+
 ## 1.5.1 — 2026-09-05
 
 - Extended home-history masking to the recent tasks, Work items, and automations shown below the Chat home composer.

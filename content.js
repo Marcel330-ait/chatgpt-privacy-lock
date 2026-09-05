@@ -553,6 +553,62 @@
     }
   }
 
+  function isAuxiliaryRowAction(element, category) {
+    if (!element || !["pinned", "projects", "chats"].includes(category)) return false;
+    if (element.tagName === "A" || element.getAttribute("href")) return false;
+    const label = [
+      element.getAttribute("aria-label") || "",
+      element.getAttribute("title") || "",
+      element.getAttribute("data-testid") || "",
+      getText(element)
+    ].join(" ");
+    if (/(edit|rename|more options|context menu|archive|delete|share|编辑|重命名|更多选项|菜单|归档|删除|分享)/i.test(label)) {
+      return true;
+    }
+    const rect = element.getBoundingClientRect();
+    const isButton = element.tagName === "BUTTON" || ["button", "menuitem"].includes(element.getAttribute("role"));
+    return isButton && rect.width > 0 && rect.width <= 96 && rect.height > 0 && rect.height <= 72;
+  }
+
+  function buildPrimaryRowBuckets(primaryEntries) {
+    const buckets = new Map();
+    primaryEntries.forEach(({ category, item }) => {
+      if (!["pinned", "projects", "chats"].includes(category)) return;
+      const rect = item.getBoundingClientRect();
+      const bucket = Math.floor((rect.top + (rect.height / 2)) / 16);
+      if (!buckets.has(bucket)) buckets.set(bucket, []);
+      buckets.get(bucket).push({ item, rect });
+    });
+    return buckets;
+  }
+
+  function primaryRowForAction(action, primaryBuckets) {
+    const actionRect = action.getBoundingClientRect();
+    const actionCenterY = actionRect.top + (actionRect.height / 2);
+    const centerBucket = Math.floor(actionCenterY / 16);
+    let bestItem = null;
+    let bestWidth = Infinity;
+    for (let bucket = centerBucket - 2; bucket <= centerBucket + 2; bucket += 1) {
+      for (const { item, rect } of primaryBuckets.get(bucket) || []) {
+        const matchesRow = rect.width >= actionRect.width * 1.5 &&
+          actionCenterY >= rect.top && actionCenterY <= rect.bottom &&
+          rect.left <= actionRect.left && rect.right >= actionRect.left - 12;
+        if (matchesRow && rect.width < bestWidth) {
+          bestItem = item;
+          bestWidth = rect.width;
+        }
+      }
+    }
+    return bestItem;
+  }
+
+  function clearProtectedItemState(item) {
+    item.classList.remove("cpl-protected-item");
+    item.removeAttribute("data-cpl-protected");
+    item.removeAttribute("data-cpl-category");
+    item.removeAttribute("data-cpl-public-label");
+  }
+
   function refreshProtection() {
     applyMaskTint();
     sidebarHost = getSidebarHost();
@@ -561,10 +617,17 @@
     const sidebarItems = sidebarHost ? [...sidebarHost.querySelectorAll(INTERACTIVE_SELECTOR)] : [];
     const clickableItems = [...new Set([...sidebarItems, ...workspaceProtectedItems])];
     const currentItems = new Set(clickableItems);
-    clickableItems.forEach((item) => {
-      const category = protectedCategory(item);
+    const entries = clickableItems.map((item) => ({ item, category: protectedCategory(item) }));
+    const actionEntries = entries.filter(({ item, category }) => isAuxiliaryRowAction(item, category));
+    const actionItems = new Set(actionEntries.map(({ item }) => item));
+    const primaryEntries = entries.filter(({ item }) => !actionItems.has(item));
+    const primaryBuckets = buildPrimaryRowBuckets(primaryEntries);
+
+    primaryEntries.forEach(({ item, category }) => {
       const shouldProtect = settings.enabled && category && settings.protectedAreas[category] && itemLooksProtected(item);
       item.classList.toggle("cpl-protected-item", Boolean(shouldProtect));
+      item.classList.remove("cpl-protected-action");
+      item.removeAttribute("data-cpl-protected-action");
       if (shouldProtect) {
         item.dataset.cplProtected = "true";
         item.dataset.cplCategory = category;
@@ -578,12 +641,22 @@
       }
     });
 
-    document.querySelectorAll(".cpl-protected-item").forEach((item) => {
+    actionEntries.forEach(({ item, category }) => {
+      const primaryItem = primaryRowForAction(item, primaryBuckets);
+      const effectiveItem = primaryItem || item;
+      const effectiveCategory = primaryItem ? protectedCategory(primaryItem) : category;
+      const shouldHide = settings.enabled && effectiveCategory && settings.protectedAreas[effectiveCategory] && itemLooksProtected(effectiveItem);
+      clearProtectedItemState(item);
+      item.classList.toggle("cpl-protected-action", Boolean(shouldHide));
+      if (shouldHide) item.dataset.cplProtectedAction = "true";
+      else item.removeAttribute("data-cpl-protected-action");
+    });
+
+    document.querySelectorAll(".cpl-protected-item, .cpl-protected-action").forEach((item) => {
       if (currentItems.has(item)) return;
-      item.classList.remove("cpl-protected-item");
-      item.removeAttribute("data-cpl-protected");
-      item.removeAttribute("data-cpl-category");
-      item.removeAttribute("data-cpl-public-label");
+      clearProtectedItemState(item);
+      item.classList.remove("cpl-protected-action");
+      item.removeAttribute("data-cpl-protected-action");
     });
 
     document.documentElement.classList.toggle("cpl-history-is-locked", isLocked());

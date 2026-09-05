@@ -23,6 +23,12 @@
   border-radius: 13px !important;
 }
 
+.cpl-history-is-locked .cpl-protected-action {
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
 .cpl-history-is-locked .cpl-protected-item > * {
   opacity: .16 !important;
   filter: blur(6px) saturate(.75) !important;
