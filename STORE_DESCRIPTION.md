@@ -21,7 +21,8 @@ Key features:
 - Lets users choose Auto, Chinese, or English manually.
 - Lets users choose which sidebar areas to protect: Search chats, Library, general navigation, Pinned chats, Projects, and Previous chats.
 - Opening one Project in clicked-item mode also reveals that Project's child chats while other Projects remain protected.
-- Keeps directory labels identifiable and replaces private titles with generic Project, Chat, or Pinned chat labels.
+- Keeps directory labels identifiable and replaces private titles with generic Project or Chat labels.
+- Automatically distinguishes Project and Chat items inside Pinned instead of assuming every pinned item is the same type.
 - Offers Indigo, Emerald, and Rose mask-glass tints while the popup UI remains neutral.
 - Includes a redesigned status-focused popup and a touch-friendly PIN dialog for narrow web layouts.
 - Stores settings locally with `chrome.storage.local`.
@@ -52,7 +53,8 @@ ChatGPT Privacy Lock 通过遮罩 ChatGPT 侧边栏中可能暴露隐私的区�
 - 可手动选择自动、中文或英文界面。
 - 可选择保护哪些侧边栏区域：搜索聊天、资料库、常用目录、置顶聊天、项目、历史聊天。
 - 仅打开点击项时，打开一个 Project 会同时显示该 Project 的子聊天，其他 Project 继续保持锁定。
-- 常用目录名称保持可识别，私人标题只显示“项目”“聊天”或“置顶聊天”等通用类型。
+- 常用目录名称保持可识别，私人标题只显示“项目”或“聊天”等通用类型。
+- 自动判断 Pinned 中的条目是 Project 还是 Chat，并显示对应的通用类型。
 - 遮挡玻璃可选择蓝紫、翡翠或玫瑰；扩展面板保持中性色。
 - 使用以保护状态为核心的新弹窗，并让 PIN 弹窗适配窄屏网页和触摸操作。
 - 使用 `chrome.storage.local` 在本地保存设置。

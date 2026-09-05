@@ -17,7 +17,8 @@
 - [ ] Confirm switching tabs or windows does not end an unlock session early.
 - [ ] Confirm Search, Library, Pinned, Projects, and Chats directory labels remain readable while protected.
 - [ ] Confirm Scheduled, Plugins, Apps, and similar General navigation entries show their real directory labels and still request a PIN when protected.
-- [ ] Confirm private Project, Chat, and Pinned rows show only generic type labels, never their real titles.
+- [ ] Confirm private rows show only generic Project or Chat labels, never their real titles.
+- [ ] Confirm Pinned Project roots display Project, pinned conversation links display Chat, and Project child conversations also display Chat.
 - [ ] Confirm protected rows use strong blur and translucent glass without exposing readable sidebar text.
 - [ ] Confirm clicking a masked area opens the PIN modal.
 - [ ] Confirm correct PIN unlocks for the configured duration.

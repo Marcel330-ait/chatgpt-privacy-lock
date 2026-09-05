@@ -101,7 +101,9 @@ flowchart LR
 - **中文**：在“仅打开点击项”模式中，打开一个 Project 会同时显示这个 Project 里的子聊天，但其他 Project 继续锁定。<br>
   **English**: In Clicked item only mode, opening a Project also reveals that Project's child chats while other Projects remain locked.
 - **中文**：Scheduled、Plugins、Apps 等常用目录以及 Pinned、Projects、Chats 标题会显示名称；私人条目只显示“项目”“聊天”或“置顶聊天”等类型，不显示真实标题。<br>
-  **English**: General navigation and section labels remain identifiable; private rows show only generic labels such as Project, Chat, or Pinned chat.
+  **English**: General navigation and section labels remain identifiable; private rows show only generic labels such as Project or Chat.
+- **中文**：Pinned 只是位置。扩展会根据链接和页面标记自动判断其中的条目是 Project 还是 Chat，并显示对应的通用类型。<br>
+  **English**: Pinned is only a location. The extension uses link and DOM markers to identify whether each pinned row is a Project or Chat.
 - **中文**：点击弹窗里的 **Lock Now / 立即锁定** 可以马上重新锁定。<br>
   **English**: Click **Lock Now** in the popup to re-lock immediately.
 - **中文**：切换标签页或窗口不会提前锁定；只有倒计时结束或点击 **立即锁定** 才会重新锁定。<br>

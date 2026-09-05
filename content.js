@@ -32,7 +32,6 @@
       localOnly: "Your PIN protection stays on this device.",
       pinLabelShort: "PIN",
       unlockForMinutes: "Unlock for $1 minutes",
-      maskedPinned: "Pinned chat",
       maskedProject: "Project",
       maskedChat: "Chat",
       incorrectPin: "Incorrect PIN",
@@ -50,7 +49,6 @@
       localOnly: "PIN 保护数据仅保存在此设备。",
       pinLabelShort: "PIN",
       unlockForMinutes: "解锁 $1 分钟",
-      maskedPinned: "置顶聊天",
       maskedProject: "项目",
       maskedChat: "聊天",
       incorrectPin: "PIN 错误",
@@ -277,6 +275,8 @@
     if (/^more$|更多/.test(lowerText)) return "";
     if (/^(scheduled|scheduled tasks?|plugins?|apps?|tasks?|已安排|定时任务|计划任务|插件|应用)$/i.test(lowerText) ||
         /^\/(scheduled|tasks?|plugins?|apps?)(\/|$)/i.test(path)) return "general";
+    if (/(^|\/)c(\/|$)/i.test(path)) return "chats";
+    if (looksLikeProjectItem(element)) return "projects";
     if (/pinned|置顶/.test(lowerText) || /pinned/i.test(testId)) return "pinned";
     if (/projects?|项目/.test(lowerText) || /^\/projects?(\/|$)/i.test(path) || /project/i.test(testId)) return "projects";
     if (/history|chats?|聊天|历史/.test(lowerText) || /^\/c(\/|$)/i.test(path) || /(conversation|history)/i.test(testId)) return "chats";
@@ -310,6 +310,23 @@
     if (projectGizmo) return projectGizmo.toLowerCase();
     const projectPath = path.match(/\/projects?\/([^/]+)/i)?.[1];
     return projectPath ? projectPath.toLowerCase() : "";
+  }
+
+  function looksLikeProjectItem(element) {
+    if (!element) return false;
+    const path = safePath(element.getAttribute?.("href") || "");
+    if (/(^|\/)c(\/|$)/i.test(path)) return false;
+    if (projectIdentityFromElement(element)) return true;
+    const marker = [
+      element.getAttribute?.("href") || "",
+      element.getAttribute?.("aria-label") || "",
+      element.getAttribute?.("data-testid") || "",
+      typeof element.className === "string" ? element.className : ""
+    ].join(" ");
+    if (/(^|[\s/_-])(project|folder)([\s/_-]|$)/i.test(marker)) return true;
+    return Boolean(element.querySelector?.(
+      '[data-testid*="project" i], [aria-label*="project" i], [aria-label*="folder" i], [data-icon*="folder" i]'
+    ));
   }
 
   function belongsToUnlockedProject(element, category = protectedCategory(element)) {
@@ -351,7 +368,7 @@
     const firstLine = text.split(/\r?\n/)[0].replace(/\s+/g, " ").trim();
     if (["search", "library", "general"].includes(category)) return firstLine.slice(0, 40);
     if (/^(pinned|projects?|chats?|置顶|项目|聊天)$/i.test(firstLine)) return firstLine.slice(0, 40);
-    if (category === "pinned") return msg("maskedPinned");
+    if (category === "pinned") return looksLikeProjectItem(element) ? msg("maskedProject") : msg("maskedChat");
     if (category === "projects") return msg("maskedProject");
     if (category === "chats") return msg("maskedChat");
     return "";
@@ -650,7 +667,8 @@
       const target = pendingProtectedItem;
       const targetKey = target ? protectedItemKey(target) : "";
       const targetCategory = target ? protectedCategory(target) : "";
-      const isProjectUnlock = settings.unlockScope === "item" && targetKey && targetCategory === "projects";
+      const isProjectUnlock = settings.unlockScope === "item" && targetKey &&
+        (targetCategory === "projects" || looksLikeProjectItem(target));
       settings.activeUnlockScope = settings.unlockScope === "item" && targetKey
         ? (isProjectUnlock ? "project" : "item")
         : "all";

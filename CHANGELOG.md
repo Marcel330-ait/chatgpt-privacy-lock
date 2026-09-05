@@ -1,5 +1,10 @@
 # Changelog / 更新日志
 
+## 1.4.2 — 2026-09-05
+
+- Separates a Pinned row's location from its actual type: Project links are labeled Project and conversation links are labeled Chat.
+- Recognizes Project roots and Project child conversations separately while keeping them in the same temporary Project unlock group.
+
 ## 1.4.1 — 2026-09-05
 
 - Treats an unlocked Project as a group so its child chats and related controls remain available for the unlock duration.
