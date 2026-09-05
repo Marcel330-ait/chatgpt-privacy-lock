@@ -19,7 +19,7 @@
 | PIN 使用 PBKDF2 + 随机 salt 存储 | Stores PIN with PBKDF2 + a random salt |
 | 错误 PIN 多次后进入短暂冷却 | Adds a short cooldown after repeated incorrect PIN attempts |
 | 可手动选择 Auto / 中文 / English | Lets users choose Auto / Chinese / English manually |
-| 可选择隐藏 Search、Library、Pinned、Projects、Chats | Lets users choose which sidebar areas to hide |
+| 可选择隐藏 Search、Library、常用目录、Pinned、Projects、Chats | Lets users choose Search, Library, General navigation, Pinned, Projects, and Chats |
 | 遮挡玻璃可选择蓝紫、翡翠或玫瑰 | Offers Indigo, Emerald, and Rose mask-glass tints |
 | 可自定义 1–120 分钟的解锁时间 | Lets users choose an unlock time from 1–120 minutes |
 | 可选择仅打开点击项或解锁整个侧边栏 | Unlocks only the clicked item or the entire sidebar |
@@ -79,8 +79,8 @@ flowchart LR
    **English**: Turn on **Sidebar protection**.
 4. **中文**：选择语言：**Auto / 中文 / English**。<br>
    **English**: Choose a language: **Auto / 中文 / English**.
-5. **中文**：勾选你想隐藏的侧边栏区域：Search chats、Library、Pinned chats、Projects、Previous chats。<br>
-   **English**: Select the sidebar areas you want to hide: Search chats, Library, Pinned chats, Projects, Previous chats.
+5. **中文**：勾选你想保护的侧边栏区域：Search chats、Library、定时任务/插件/应用、Pinned chats、Projects、Previous chats。<br>
+   **English**: Select the sidebar areas to protect: Search chats, Library, Scheduled/Plugins/Apps, Pinned chats, Projects, and Previous chats.
 6. **中文**：设置解锁时间，并选择 **仅打开点击项** 或 **打开全部侧边栏**。<br>
    **English**: Set the unlock time and choose **Clicked item only** or **Entire sidebar**.
 7. **中文**：选择遮挡玻璃颜色：**蓝紫 / 翡翠 / 玫瑰**。颜色只改变遮挡玻璃，不会改变扩展面板。<br>
@@ -98,6 +98,10 @@ flowchart LR
   **English**: Masks balance translucency and blur and are available in Indigo, Emerald, or Rose.
 - **中文**：点击被保护区域会弹出 PIN 输入框。PIN 正确后，会按设置打开点击项或整个侧边栏，并开始自定义倒计时。<br>
   **English**: Clicking a protected area opens a PIN dialog. A correct PIN opens the clicked item or the entire sidebar for the configured duration.
+- **中文**：在“仅打开点击项”模式中，打开一个 Project 会同时显示这个 Project 里的子聊天，但其他 Project 继续锁定。<br>
+  **English**: In Clicked item only mode, opening a Project also reveals that Project's child chats while other Projects remain locked.
+- **中文**：Scheduled、Plugins、Apps 等常用目录以及 Pinned、Projects、Chats 标题会显示名称；私人条目只显示“项目”“聊天”或“置顶聊天”等类型，不显示真实标题。<br>
+  **English**: General navigation and section labels remain identifiable; private rows show only generic labels such as Project, Chat, or Pinned chat.
 - **中文**：点击弹窗里的 **Lock Now / 立即锁定** 可以马上重新锁定。<br>
   **English**: Click **Lock Now** in the popup to re-lock immediately.
 - **中文**：切换标签页或窗口不会提前锁定；只有倒计时结束或点击 **立即锁定** 才会重新锁定。<br>

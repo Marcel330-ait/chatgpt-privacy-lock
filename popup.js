@@ -7,6 +7,7 @@ const PIN_ITERATIONS = 150000;
 const DEFAULT_AREAS = {
   search: true,
   library: true,
+  general: true,
   pinned: true,
   projects: true,
   chats: true
@@ -38,6 +39,7 @@ const TEXT = {
     protectWhat: "Hide these sidebar areas",
     areaSearch: "Search chats",
     areaLibrary: "Library",
+    areaGeneral: "Scheduled, Plugins & Apps",
     areaPinned: "Pinned chats",
     areaProjects: "Projects",
     areaChats: "Previous chats",
@@ -92,6 +94,7 @@ const TEXT = {
     protectWhat: "隐藏这些侧边栏区域",
     areaSearch: "搜索聊天",
     areaLibrary: "资料库",
+    areaGeneral: "定时任务、插件与应用",
     areaPinned: "置顶聊天",
     areaProjects: "项目",
     areaChats: "历史聊天",
@@ -210,7 +213,7 @@ function statusLabel({ isEnabled, unlockUntil, activeUnlockScope }) {
   if (!isEnabled) return msg("statusOff");
   if (!hasPin) return msg("statusPinRequired");
   if (unlockUntil > Date.now()) {
-    const key = activeUnlockScope === "item" ? "statusUnlockedItemFor" : "statusUnlockedAllFor";
+    const key = ["item", "project"].includes(activeUnlockScope) ? "statusUnlockedItemFor" : "statusUnlockedAllFor";
     return msg(key, [formatRemaining(unlockUntil - Date.now())]);
   }
   return msg("statusLocked");
@@ -268,7 +271,7 @@ function updateCopy(stored = {}) {
     currentUnlockUntil = Number(stored.unlockUntil) || 0;
   }
   if (Object.prototype.hasOwnProperty.call(stored, "activeUnlockScope")) {
-    currentActiveUnlockScope = ["item", "all"].includes(stored.activeUnlockScope) ? stored.activeUnlockScope : "";
+    currentActiveUnlockScope = ["item", "project", "all"].includes(stored.activeUnlockScope) ? stored.activeUnlockScope : "";
   }
   const unlockUntil = currentUnlockUntil;
   statusText.textContent = statusLabel({
@@ -287,7 +290,7 @@ async function loadState() {
   const stored = await chrome.storage.local.get(["enabled", "language", "accentTheme", "protectedAreas", "pinHash", "unlockDurationMinutes", "unlockScope", "unlockUntil", "activeUnlockScope"]);
   hasPin = Boolean(stored.pinHash);
   currentUnlockUntil = Number(stored.unlockUntil) || 0;
-  currentActiveUnlockScope = ["item", "all"].includes(stored.activeUnlockScope) ? stored.activeUnlockScope : "";
+  currentActiveUnlockScope = ["item", "project", "all"].includes(stored.activeUnlockScope) ? stored.activeUnlockScope : "";
   enabled.checked = Boolean(stored.enabled);
   language.value = stored.language || "auto";
   const areas = { ...DEFAULT_AREAS, ...(stored.protectedAreas || {}) };
@@ -341,7 +344,8 @@ enabled.addEventListener("change", async () => {
       unlockScope: unlockScope.value,
       unlockUntil: 0,
       activeUnlockScope: "",
-      unlockedItemKey: ""
+      unlockedItemKey: "",
+      unlockedProjectIdentity: ""
     });
     updateCopy({ unlockUntil: 0 });
     await notifyActiveChatGPT();
@@ -354,7 +358,8 @@ enabled.addEventListener("change", async () => {
     enabled: enabled.checked,
     unlockUntil: 0,
     activeUnlockScope: "",
-    unlockedItemKey: ""
+    unlockedItemKey: "",
+    unlockedProjectIdentity: ""
   });
   updateCopy({ unlockUntil: 0 });
   await notifyActiveChatGPT();
@@ -400,6 +405,7 @@ form.addEventListener("submit", async (event) => {
     updates.unlockUntil = 0;
     updates.activeUnlockScope = "";
     updates.unlockedItemKey = "";
+    updates.unlockedProjectIdentity = "";
   }
 
   await chrome.storage.local.set(updates);
@@ -420,7 +426,7 @@ lockNow.addEventListener("click", async () => {
     return;
   }
 
-  await chrome.storage.local.set({ enabled: true, unlockUntil: 0, activeUnlockScope: "", unlockedItemKey: "" });
+  await chrome.storage.local.set({ enabled: true, unlockUntil: 0, activeUnlockScope: "", unlockedItemKey: "", unlockedProjectIdentity: "" });
   currentUnlockUntil = 0;
   currentActiveUnlockScope = "";
   statusCard.dataset.state = "locked";

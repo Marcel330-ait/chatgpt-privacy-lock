@@ -1,5 +1,11 @@
 # Changelog / 更新日志
 
+## 1.4.1 — 2026-09-05
+
+- Treats an unlocked Project as a group so its child chats and related controls remain available for the unlock duration.
+- Adds a dedicated General navigation protection option for Scheduled, Plugins, Apps, and similar top-level entries.
+- Keeps protected general-navigation names readable and labels private rows generically as Project, Chat, or Pinned chat.
+
 ## 1.4.0 — 2026-09-05
 
 - Added three compact mask-glass tints: Indigo, Emerald, and Rose.
