@@ -230,6 +230,36 @@
     }
   }
 
+  function navigationHref(element) {
+    if (!element) return "";
+    const directHref = element.getAttribute?.("href") || "";
+    if (directHref) return directHref;
+
+    const nestedHrefs = [...new Set(
+      [...(element.querySelectorAll?.("a[href]") || [])]
+        .map((link) => link.getAttribute("href") || "")
+        .filter(Boolean)
+    )];
+    return nestedHrefs.length === 1 ? nestedHrefs[0] : "";
+  }
+
+  function isCompositeInteractiveContainer(element) {
+    if (!element || element.getAttribute?.("href")) return false;
+    const nestedItems = element.querySelectorAll?.('a[href], button, [role="button"], [role="link"]');
+    return Boolean(nestedItems && nestedItems.length > 1);
+  }
+
+  function ownsMatchingDescendant(element, selector) {
+    if (!element?.querySelectorAll) return false;
+    return [...element.querySelectorAll(selector)].some((candidate) =>
+      candidate.closest('a, button, [role="button"], [role="link"]') === element
+    );
+  }
+
+  function isConversationPath(path) {
+    return /(^|\/)c(\/|$)/i.test(path) || /(^|\/)(conversation|chat)(s)?(\/|$)/i.test(path);
+  }
+
   function sectionCategoryFromPosition(element) {
     const host = sidebarHost || getSidebarHost();
     if (!host) return "";
@@ -262,10 +292,11 @@
   function protectedCategory(element) {
     if (!element || !isInSidebar(element)) return "";
     if (element.matches('[data-cpl-badge], [data-cpl-modal], [data-cpl-modal] *')) return "";
+    if (isCompositeInteractiveContainer(element)) return "";
 
     const text = getText(element);
     const lowerText = text.toLowerCase();
-    const href = element.getAttribute("href") || "";
+    const href = navigationHref(element);
     const path = safePath(href);
     const testId = element.getAttribute("data-testid") || "";
 
@@ -275,14 +306,20 @@
     if (/^more$|更多/.test(lowerText)) return "";
     if (/^(scheduled|scheduled tasks?|plugins?|apps?|tasks?|已安排|定时任务|计划任务|插件|应用)$/i.test(lowerText) ||
         /^\/(scheduled|tasks?|plugins?|apps?)(\/|$)/i.test(path)) return "general";
-    if (/(^|\/)c(\/|$)/i.test(path)) return "chats";
+    if (isConversationPath(path)) return "chats";
     if (looksLikeProjectItem(element)) return "projects";
-    if (/pinned|置顶/.test(lowerText) || /pinned/i.test(testId)) return "pinned";
-    if (/projects?|项目/.test(lowerText) || /^\/projects?(\/|$)/i.test(path) || /project/i.test(testId)) return "projects";
+    if (/^(pinned|置顶)$/i.test(lowerText) || /pinned/i.test(testId)) return "pinned";
+    if (/^(projects?|项目)$/i.test(lowerText) || /^\/projects?(\/|$)/i.test(path)) return "projects";
     if (/history|chats?|聊天|历史/.test(lowerText) || /^\/c(\/|$)/i.test(path) || /(conversation|history)/i.test(testId)) return "chats";
 
     const sectionCategory = sectionCategoryFromPosition(element);
-    if (sectionCategory) return sectionCategory;
+    if (sectionCategory === "pinned") return "pinned";
+    if (sectionCategory === "chats") return "chats";
+    if (sectionCategory === "projects") {
+      // A Projects section can contain both project entry rows and the chats
+      // expanded beneath a project. Location alone must not define item type.
+      return looksLikeProjectItem(element) ? "projects" : "chats";
+    }
     if (text.trim() && isGeneralNavigationPosition(element)) return "general";
 
     if (element.tagName === "A" && href && !/^\/(auth|share|settings|gpts?)(\/|$)/i.test(path)) return "chats";
@@ -303,7 +340,7 @@
   }
 
   function projectIdentityFromElement(element) {
-    const href = element?.getAttribute?.("href") || "";
+    const href = navigationHref(element);
     if (!href) return "";
     const path = safePath(href);
     const projectGizmo = path.match(/\/g\/(g-p-[^/]+)/i)?.[1];
@@ -314,8 +351,8 @@
 
   function looksLikeProjectItem(element) {
     if (!element) return false;
-    const path = safePath(element.getAttribute?.("href") || "");
-    if (/(^|\/)c(\/|$)/i.test(path)) return false;
+    const path = safePath(navigationHref(element));
+    if (isConversationPath(path)) return false;
     if (projectIdentityFromElement(element)) return true;
     const marker = [
       element.getAttribute?.("href") || "",
@@ -323,10 +360,12 @@
       element.getAttribute?.("data-testid") || "",
       typeof element.className === "string" ? element.className : ""
     ].join(" ");
+    if (/(^|[\s/_-])(conversation|chat|history)([\s/_-]|$)/i.test(marker)) return false;
     if (/(^|[\s/_-])(project|folder)([\s/_-]|$)/i.test(marker)) return true;
-    return Boolean(element.querySelector?.(
-      '[data-testid*="project" i], [aria-label*="project" i], [aria-label*="folder" i], [data-icon*="folder" i]'
-    ));
+    return ownsMatchingDescendant(
+      element,
+      '[data-testid*="project" i], [aria-label*="project" i], [aria-label*="folder" i], [data-icon*="folder" i], [class*="folder" i]'
+    );
   }
 
   function belongsToUnlockedProject(element, category = protectedCategory(element)) {
@@ -350,7 +389,7 @@
   }
 
   function protectedItemKey(element, category = protectedCategory(element)) {
-    const href = element?.getAttribute?.("href") || "";
+    const href = navigationHref(element);
     if (href) {
       try {
         const url = new URL(href, location.origin);

@@ -1,5 +1,11 @@
 # Changelog / 更新日志
 
+## 1.4.3 — 2026-09-05
+
+- Fixed project conversations being mislabeled as projects after expanding a project.
+- Sidebar item type detection now prioritizes each row's own navigation route and owned icon markers.
+- Prevented composite project containers from masking all nested conversations as one project item.
+
 ## 1.4.2 — 2026-09-05
 
 - Separates a Pinned row's location from its actual type: Project links are labeled Project and conversation links are labeled Chat.
