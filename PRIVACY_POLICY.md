@@ -4,19 +4,19 @@ Effective date / 生效日期: 2026-09-05
 
 ## English
 
-ChatGPT Privacy Lock is a local browser-extension privacy layer for masking ChatGPT sidebar navigation that may reveal conversation history, pinned chats, projects, library items, or search entry points.
+ChatGPT Privacy Lock is a local browser-extension privacy layer for masking ChatGPT navigation that may reveal conversation history, pinned chats, projects, library items, Work history, or search entry points.
 
 ### Data handled
 
 - The extension stores its enabled/disabled state in `chrome.storage.local`.
-- The extension stores display preferences such as language, mask-glass tint, unlock duration, unlock scope, and selected protected sidebar areas in `chrome.storage.local`.
+- The extension stores display preferences such as language, mask-glass tint, unlock duration, unlock scope, and selected protected areas in `chrome.storage.local`.
 - The extension stores a PIN-derived value using PBKDF2 with a random salt in `chrome.storage.local`.
-- The extension stores temporary lock metadata such as `unlockUntil`, failed-attempt count, and cooldown time in `chrome.storage.local`.
+- The extension stores temporary lock metadata such as `unlockUntil`, local navigation identifiers for currently unlocked items, failed-attempt count, and cooldown time in `chrome.storage.local`.
 
 ### Data not collected
 
 - The extension does not collect, transmit, sell, or share personal data.
-- The extension does not upload ChatGPT conversations, sidebar titles, project names, prompts, files, account details, or browsing history to any server.
+- The extension does not upload ChatGPT conversations, sidebar or Work-history titles, project names, prompts, files, account details, or browsing history to any server.
 - The extension does not use analytics, tracking pixels, advertising identifiers, or remote code.
 
 ### Permissions
@@ -29,19 +29,19 @@ This is a shoulder-surfing and casual-access privacy UX layer. It is not a repla
 
 ## 中文
 
-ChatGPT Privacy Lock 是一个本地浏览器扩展，用于遮罩 ChatGPT 侧边栏中可能暴露聊天历史、置顶聊天、项目、资料库或搜索入口的导航区域。
+ChatGPT Privacy Lock 是一个本地浏览器扩展，用于遮罩 ChatGPT 导航中可能暴露聊天历史、置顶聊天、项目、资料库、Work 历史或搜索入口的区域。
 
 ### 处理的数据
 
 - 扩展会把开启/关闭状态存储在 `chrome.storage.local`。
 - 扩展会把语言、遮挡玻璃颜色、解锁时间、解锁范围和所选保护区域等显示偏好存储在 `chrome.storage.local`。
 - 扩展会使用 PBKDF2 + 随机 salt 保存 PIN 的派生值，存储位置为 `chrome.storage.local`。
-- 扩展会保存临时锁定状态，例如 `unlockUntil`、错误次数和冷却时间，存储位置为 `chrome.storage.local`。
+- 扩展会保存临时锁定状态，例如 `unlockUntil`、当前已解锁条目的本地导航标识、错误次数和冷却时间，存储位置为 `chrome.storage.local`。
 
 ### 不收集的数据
 
 - 扩展不会收集、传输、出售或共享个人数据。
-- 扩展不会上传 ChatGPT 对话、侧边栏标题、项目名称、提示词、文件、账号信息或浏览历史到任何服务器。
+- 扩展不会上传 ChatGPT 对话、侧边栏或 Work 历史标题、项目名称、提示词、文件、账号信息或浏览历史到任何服务器。
 - 扩展不使用分析工具、追踪像素、广告标识符或远程代码。
 
 ### 权限

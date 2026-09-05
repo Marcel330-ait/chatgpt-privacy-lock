@@ -10,7 +10,8 @@ const DEFAULT_AREAS = {
   general: true,
   pinned: true,
   projects: true,
-  chats: true
+  chats: true,
+  workspace: true
 };
 
 const TEXT = {
@@ -39,11 +40,12 @@ const TEXT = {
     protectWhat: "Hide these sidebar areas",
     areaSearch: "Search chats",
     areaLibrary: "Library",
-    areaGeneral: "Scheduled, Plugins & Apps",
+    areaGeneral: "New chat, More & general links",
     areaPinned: "Pinned chats",
     areaProjects: "Projects",
     areaChats: "Previous chats",
-    protectWhatHelp: "New chat and the current conversation stay usable.",
+    areaWorkspace: "Chat / Work & Work history",
+    protectWhatHelp: "The currently open conversation stays usable.",
     setPin: "Set a PIN",
     changePinOptional: "Change PIN (optional)",
     pinPlaceholder: "At least 4 characters",
@@ -94,11 +96,12 @@ const TEXT = {
     protectWhat: "隐藏这些侧边栏区域",
     areaSearch: "搜索聊天",
     areaLibrary: "资料库",
-    areaGeneral: "定时任务、插件与应用",
+    areaGeneral: "新建聊天、更多与常用入口",
     areaPinned: "置顶聊天",
     areaProjects: "项目",
     areaChats: "历史聊天",
-    protectWhatHelp: "新建聊天和当前对话会保持可用。",
+    areaWorkspace: "Chat / Work 与工作历史",
+    protectWhatHelp: "当前已经打开的对话会保持可用。",
     setPin: "设置 PIN",
     changePinOptional: "修改 PIN（可选）",
     pinPlaceholder: "至少 4 位字符",
@@ -370,6 +373,11 @@ enabled.addEventListener("change", async () => {
 });
 areaInputs.forEach((input) => input.addEventListener("change", updateAreaCount));
 unlockDuration.addEventListener("change", selectedDurationMinutes);
+accentInputs.forEach((input) => input.addEventListener("change", async () => {
+  if (!input.checked) return;
+  await chrome.storage.local.set({ accentTheme: input.value });
+  await notifyActiveChatGPT();
+}));
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();

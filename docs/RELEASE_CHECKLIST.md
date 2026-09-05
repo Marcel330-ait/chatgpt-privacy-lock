@@ -6,13 +6,15 @@
 - [ ] Test `https://chatgpt.com/*`.
 - [ ] Test `https://chat.openai.com/*`.
 - [ ] Confirm the current chat, composer, attachments, voice, and send button still work.
-- [ ] Confirm Search chats, Library, Pinned, Projects, and previous chats are masked when locked.
+- [ ] Confirm New chat, More, Search chats, Library, Pinned, Projects, and previous chats are protected when locked.
 - [ ] Confirm each protected-area checkbox only hides that selected area.
 - [ ] Confirm language selection works in Auto, Chinese, and English.
-- [ ] Confirm Indigo, Emerald, and Rose tints change the masks without recoloring the popup, badge, or PIN dialog.
+- [ ] Confirm Indigo, Emerald, and Rose tints change the masks immediately without Save or recoloring the popup, badge, or PIN dialog.
 - [ ] Confirm a custom unlock duration from 1–120 minutes is respected.
 - [ ] Confirm Clicked item only opens and navigates to that item while other protected rows stay locked.
 - [ ] Confirm opening a Project in Clicked item only mode reveals its child chats and controls but not other Projects.
+- [ ] Confirm cumulative item mode keeps every previously opened Project or chat visible until expiry or Lock Now.
+- [ ] Confirm the Chat/Work switch and Work home history entries request a PIN while the active conversation remains usable.
 - [ ] Confirm Entire sidebar reveals every protected row until the timer ends.
 - [ ] Confirm switching tabs or windows does not end an unlock session early.
 - [ ] Confirm Search, Library, Pinned, Projects, and Chats directory labels remain readable while protected.

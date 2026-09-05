@@ -19,7 +19,8 @@
     general: true,
     pinned: true,
     projects: true,
-    chats: true
+    chats: true,
+    workspace: true
   };
 
   const TEXT = {
@@ -34,6 +35,7 @@
       unlockForMinutes: "Unlock for $1 minutes",
       maskedProject: "Project",
       maskedChat: "Chat",
+      maskedWorkItem: "Work item",
       incorrectPin: "Incorrect PIN",
       tooManyAttempts: "Too many attempts. Try again in $1 seconds.",
       tryAgainInSeconds: "Try again in $1s.",
@@ -51,6 +53,7 @@
       unlockForMinutes: "解锁 $1 分钟",
       maskedProject: "项目",
       maskedChat: "聊天",
+      maskedWorkItem: "工作条目",
       incorrectPin: "PIN 错误",
       tooManyAttempts: "尝试次数过多，请 $1 秒后再试。",
       tryAgainInSeconds: "请 $1 秒后再试。",
@@ -60,6 +63,8 @@
   };
 
   const PROTECTED_TEST_ID = /(conversation|history|project|library|search|pinned)/i;
+  const INTERACTIVE_SELECTOR = 'a, button, [role="button"], [role="link"], [role="tab"]';
+  const WORK_INPUT_SELECTOR = 'textarea[placeholder*="work on" i], input[placeholder*="work on" i], [contenteditable="true"][data-placeholder*="work on" i]';
 
   let settings = {
     enabled: false,
@@ -89,6 +94,13 @@
   let badge;
   let sidebarHost;
   let refreshMicrotaskQueued = false;
+  let sidebarSectionHeadings = [];
+  let firstPrivateHeadingTop = Infinity;
+  let workspaceProtectedItems = new Set();
+  let workSwitchItems = new Set();
+  let workHomeRoot = null;
+  let unlockedItemKeySet = new Set();
+  let unlockedProjectIdentitySet = new Set();
 
   function currentLanguage() {
     if (settings.language === "en" || settings.language === "zh_CN") return settings.language;
@@ -158,6 +170,8 @@
         failedPinAttempts: Number(stored.failedPinAttempts) || 0,
         pinCooldownUntil: Number(stored.pinCooldownUntil) || 0
       };
+      unlockedItemKeySet = new Set(settings.unlockedItemKeys);
+      unlockedProjectIdentitySet = new Set(settings.unlockedProjectIdentities);
       resolve();
     });
   });
@@ -277,7 +291,7 @@
 
   function isCompositeInteractiveContainer(element) {
     if (!element || element.getAttribute?.("href")) return false;
-    const nestedItems = element.querySelectorAll?.('a[href], button, [role="button"], [role="link"]');
+    const nestedItems = element.querySelectorAll?.(INTERACTIVE_SELECTOR);
     return Boolean(nestedItems && nestedItems.length > 1);
   }
 
@@ -292,17 +306,30 @@
     return /(^|\/)c(\/|$)/i.test(path) || /(^|\/)(conversation|chat)(s)?(\/|$)/i.test(path);
   }
 
+  function rebuildSidebarScanContext(host) {
+    sidebarSectionHeadings = [];
+    firstPrivateHeadingTop = Infinity;
+    if (!host) return;
+
+    sidebarSectionHeadings = [...host.querySelectorAll("h1,h2,h3,h4,h5,h6,div,span,p")]
+      .map((candidate) => ({ text: getText(candidate), rect: candidate.getBoundingClientRect() }))
+      .filter(({ text, rect }) => /^(pinned|projects?|chats?|置顶|项目|聊天)$/i.test(text) && rect.height > 0)
+      .sort((a, b) => a.rect.top - b.rect.top);
+    firstPrivateHeadingTop = sidebarSectionHeadings.reduce(
+      (top, heading) => Math.min(top, heading.rect.top),
+      Infinity
+    );
+  }
+
   function sectionCategoryFromPosition(element) {
-    const host = sidebarHost || getSidebarHost();
-    if (!host) return "";
-
     const rowTop = element.getBoundingClientRect().top;
-    const headings = [...host.querySelectorAll("h1,h2,h3,h4,h5,h6,div,span,p")]
-      .map((candidate) => ({ element: candidate, text: getText(candidate), rect: candidate.getBoundingClientRect() }))
-      .filter(({ text, rect }) => /^(pinned|projects?|chats?|置顶|项目|聊天)$/i.test(text) && rect.height > 0 && rect.top <= rowTop + 2)
-      .sort((a, b) => b.rect.top - a.rect.top);
-
-    const heading = headings[0]?.text.toLowerCase() || "";
+    let heading = "";
+    for (let index = sidebarSectionHeadings.length - 1; index >= 0; index -= 1) {
+      if (sidebarSectionHeadings[index].rect.top <= rowTop + 2) {
+        heading = sidebarSectionHeadings[index].text.toLowerCase();
+        break;
+      }
+    }
     if (/pinned|置顶/.test(heading)) return "pinned";
     if (/projects?|项目/.test(heading)) return "projects";
     if (/chats?|聊天/.test(heading)) return "chats";
@@ -310,20 +337,73 @@
   }
 
   function isGeneralNavigationPosition(element) {
-    const host = sidebarHost || getSidebarHost();
-    if (!host) return false;
     const row = element.getBoundingClientRect();
-    const firstPrivateHeadingTop = [...host.querySelectorAll("h1,h2,h3,h4,h5,h6,div,span,p")]
-      .filter((candidate) => /^(pinned|projects?|chats?|置顶|项目|聊天)$/i.test(getText(candidate)))
-      .map((candidate) => candidate.getBoundingClientRect())
-      .filter((rect) => rect.height > 0)
-      .reduce((top, rect) => Math.min(top, rect.top), Infinity);
     return Number.isFinite(firstPrivateHeadingTop) && row.height > 0 && row.bottom <= firstPrivateHeadingTop + 2;
   }
 
+  function findWorkSwitchItems() {
+    const topControls = [...document.querySelectorAll('button, [role="button"], [role="tab"]')]
+      .filter((element) => {
+        const label = getText(element).trim().toLowerCase();
+        const rect = element.getBoundingClientRect();
+        return /^(chat|work)$/.test(label) && rect.width > 0 && rect.height > 0 && rect.top >= 0 && rect.top < 160;
+      });
+    const chatControls = topControls.filter((element) => getText(element).trim().toLowerCase() === "chat");
+    const workControls = topControls.filter((element) => getText(element).trim().toLowerCase() === "work");
+
+    for (const chatControl of chatControls) {
+      for (const workControl of workControls) {
+        for (let ancestor = chatControl.parentElement, depth = 0; ancestor && depth < 5; ancestor = ancestor.parentElement, depth += 1) {
+          const rect = ancestor.getBoundingClientRect();
+          if (ancestor.contains(workControl) && rect.width <= 600 && rect.height <= 120) {
+            return new Set([chatControl, workControl]);
+          }
+        }
+      }
+    }
+    return new Set();
+  }
+
+  function workHomeDirectoryItems() {
+    workHomeRoot = null;
+    const input = document.querySelector(WORK_INPUT_SELECTOR);
+    if (!input) return [];
+
+    const main = input.closest("main") || input.closest('[role="main"]');
+    if (!main) return [];
+    const isWorkHome = [...main.querySelectorAll("h1,h2,h3")]
+      .some((heading) => /^what should we work on\??$/i.test(getText(heading).trim()));
+    if (!isWorkHome) return [];
+    workHomeRoot = main;
+
+    let composer = input;
+    for (let ancestor = input.parentElement; ancestor && ancestor !== main; ancestor = ancestor.parentElement) {
+      const rect = ancestor.getBoundingClientRect();
+      if (rect.height >= 60 && rect.height <= 260 && rect.width >= 280) composer = ancestor;
+      if (rect.height > 260) break;
+    }
+    const directoryTop = composer.getBoundingClientRect().bottom + 6;
+
+    return [...main.querySelectorAll(INTERACTIVE_SELECTOR)].filter((element) => {
+      if (element === input || element.contains(input) || workSwitchItems.has(element)) return false;
+      if (isCompositeInteractiveContainer(element)) return false;
+      const text = getText(element).replace(/\s+/g, " ").trim();
+      const rect = element.getBoundingClientRect();
+      if (!text || rect.width < 160 || rect.height < 20 || rect.height > 90 || rect.top < directoryTop) return false;
+      return !/^(project|files|plugins|open desktop app|项目|文件|插件|打开桌面应用)$/i.test(text);
+    });
+  }
+
+  function rebuildWorkspaceScanContext() {
+    workSwitchItems = findWorkSwitchItems();
+    workspaceProtectedItems = new Set([...workSwitchItems, ...workHomeDirectoryItems()]);
+  }
+
   function protectedCategory(element) {
-    if (!element || !isInSidebar(element)) return "";
+    if (!element) return "";
     if (element.matches('[data-cpl-badge], [data-cpl-modal], [data-cpl-modal] *')) return "";
+    if (workspaceProtectedItems.has(element)) return isCompositeInteractiveContainer(element) ? "" : "workspace";
+    if (!isInSidebar(element)) return "";
     if (isCompositeInteractiveContainer(element)) return "";
 
     const text = getText(element);
@@ -332,10 +412,11 @@
     const path = safePath(href);
     const testId = element.getAttribute("data-testid") || "";
 
-    if (/new chat|settings|explore gpts/i.test(text)) return "";
+    if (/settings|explore gpts/i.test(text)) return "";
+    if (/^(new chat|新建聊天)$/i.test(text.trim())) return "general";
     if (/search chats|搜索/.test(lowerText) || /^\/search(\/|$)/i.test(path) || /search/i.test(testId)) return "search";
     if (/library|资料库|库/.test(lowerText) || /^\/library(\/|$)/i.test(path) || /library/i.test(testId)) return "library";
-    if (/^more$|更多/.test(lowerText)) return "";
+    if (/^(more|更多)$/i.test(lowerText)) return "general";
     if (/^(scheduled|scheduled tasks?|plugins?|apps?|tasks?|已安排|定时任务|计划任务|插件|应用)$/i.test(lowerText) ||
         /^\/(scheduled|tasks?|plugins?|apps?)(\/|$)/i.test(path)) return "general";
     if (isConversationPath(path)) return "chats";
@@ -399,9 +480,9 @@
 
   function belongsToCurrentUnlockSession(element, category = protectedCategory(element)) {
     const itemKey = protectedItemKey(element, category);
-    if (settings.unlockedItemKeys.includes(itemKey)) return true;
+    if (unlockedItemKeySet.has(itemKey)) return true;
     const identity = projectIdentityFromElement(element);
-    return Boolean(identity && settings.unlockedProjectIdentities.includes(identity));
+    return Boolean(identity && unlockedProjectIdentitySet.has(identity));
   }
 
   function protectedItemKey(element, category = protectedCategory(element)) {
@@ -426,6 +507,7 @@
     if (category === "pinned") return looksLikeProjectItem(element) ? msg("maskedProject") : msg("maskedChat");
     if (category === "projects") return msg("maskedProject");
     if (category === "chats") return msg("maskedChat");
+    if (category === "workspace") return workSwitchItems.has(element) ? firstLine.slice(0, 40) : msg("maskedWorkItem");
     return "";
   }
 
@@ -464,9 +546,10 @@
   function refreshProtection() {
     applyMaskTint();
     sidebarHost = getSidebarHost();
-    const clickableItems = sidebarHost
-      ? [...sidebarHost.querySelectorAll('a, button, [role="button"], [role="link"]')]
-      : [];
+    rebuildSidebarScanContext(sidebarHost);
+    rebuildWorkspaceScanContext();
+    const sidebarItems = sidebarHost ? [...sidebarHost.querySelectorAll(INTERACTIVE_SELECTOR)] : [];
+    const clickableItems = [...new Set([...sidebarItems, ...workspaceProtectedItems])];
     const currentItems = new Set(clickableItems);
     clickableItems.forEach((item) => {
       const category = protectedCategory(item);
@@ -508,6 +591,8 @@
       settings.unlockedProjectIdentity = "";
       settings.unlockedItemKeys = [];
       settings.unlockedProjectIdentities = [];
+      unlockedItemKeySet.clear();
+      unlockedProjectIdentitySet.clear();
       await chrome.storage.local.set({
         unlockUntil: 0,
         activeUnlockScope: "",
@@ -732,21 +817,23 @@
       const isItemSession = settings.unlockScope === "item" && targetKey;
       const continuingItemSession = hasActiveUnlock() && settings.activeUnlockScope !== "all";
       if (!continuingItemSession) {
-        settings.unlockedItemKeys = [];
-        settings.unlockedProjectIdentities = [];
+        unlockedItemKeySet.clear();
+        unlockedProjectIdentitySet.clear();
       }
       settings.activeUnlockScope = isItemSession ? "item" : "all";
       if (isItemSession) {
-        settings.unlockedItemKeys = [...new Set([...settings.unlockedItemKeys, targetKey])];
+        unlockedItemKeySet.add(targetKey);
         const projectIdentity = isProjectUnlock ? projectIdentityFromElement(target) : "";
-        settings.unlockedProjectIdentities = projectIdentity
-          ? [...new Set([...settings.unlockedProjectIdentities, projectIdentity])]
-          : settings.unlockedProjectIdentities;
+        if (projectIdentity) unlockedProjectIdentitySet.add(projectIdentity);
+        settings.unlockedItemKeys = [...unlockedItemKeySet];
+        settings.unlockedProjectIdentities = [...unlockedProjectIdentitySet];
         settings.unlockedItemKey = targetKey;
         settings.unlockedProjectIdentity = projectIdentity;
       } else {
         settings.unlockedItemKeys = [];
         settings.unlockedProjectIdentities = [];
+        unlockedItemKeySet.clear();
+        unlockedProjectIdentitySet.clear();
         settings.unlockedItemKey = "";
         settings.unlockedProjectIdentity = "";
       }
@@ -817,8 +904,14 @@
     if (changes.activeUnlockScope) settings.activeUnlockScope = ["item", "project", "all"].includes(changes.activeUnlockScope.newValue) ? changes.activeUnlockScope.newValue : "";
     if (changes.unlockedItemKey) settings.unlockedItemKey = changes.unlockedItemKey.newValue || "";
     if (changes.unlockedProjectIdentity) settings.unlockedProjectIdentity = changes.unlockedProjectIdentity.newValue || "";
-    if (changes.unlockedItemKeys) settings.unlockedItemKeys = Array.isArray(changes.unlockedItemKeys.newValue) ? changes.unlockedItemKeys.newValue : [];
-    if (changes.unlockedProjectIdentities) settings.unlockedProjectIdentities = Array.isArray(changes.unlockedProjectIdentities.newValue) ? changes.unlockedProjectIdentities.newValue : [];
+    if (changes.unlockedItemKeys) {
+      settings.unlockedItemKeys = Array.isArray(changes.unlockedItemKeys.newValue) ? changes.unlockedItemKeys.newValue : [];
+      unlockedItemKeySet = new Set(settings.unlockedItemKeys);
+    }
+    if (changes.unlockedProjectIdentities) {
+      settings.unlockedProjectIdentities = Array.isArray(changes.unlockedProjectIdentities.newValue) ? changes.unlockedProjectIdentities.newValue : [];
+      unlockedProjectIdentitySet = new Set(settings.unlockedProjectIdentities);
+    }
     if (changes.failedPinAttempts) settings.failedPinAttempts = Number(changes.failedPinAttempts.newValue) || 0;
     if (changes.pinCooldownUntil) settings.pinCooldownUntil = Number(changes.pinCooldownUntil.newValue) || 0;
     if (!settings.enabled || !isLocked() || (changes.unlockUntil && settings.unlockUntil <= Date.now())) closeModal();
@@ -836,7 +929,16 @@
         node === sidebarHost || (node instanceof Element && node.contains(sidebarHost))
       );
     });
-    if (sidebarChanged) queueRefresh(true);
+    const workspaceChanged = mutations.some((mutation) => {
+      if (workHomeRoot && mutation.target instanceof Node &&
+          (workHomeRoot.contains(mutation.target) || (mutation.target instanceof Element && mutation.target.contains(workHomeRoot)))) {
+        return true;
+      }
+      return [...mutation.addedNodes].some((node) =>
+        node instanceof Element && (node.matches(WORK_INPUT_SELECTOR) || node.querySelector(WORK_INPUT_SELECTOR))
+      );
+    });
+    if (sidebarChanged || workspaceChanged) queueRefresh(true);
   }).observe(document.documentElement, { childList: true, subtree: true });
   window.addEventListener("resize", () => queueRefresh());
 

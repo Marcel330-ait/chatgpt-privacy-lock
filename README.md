@@ -4,9 +4,9 @@
 > Copyright © 2026 Marcel ([@Marcel330-ait](https://github.com/Marcel330-ait)). All rights reserved.<br>
 > Personal, private, non-commercial use only. See [CONFIDENTIAL_NOTICE.txt](CONFIDENTIAL_NOTICE.txt).
 
-**中文**：一个 Chrome Manifest V3 扩展，用来保护 ChatGPT 左侧栏里的聊天历史、Pinned、Projects、Library 和 Search chats，同时不影响当前对话、消息输入框或发送按钮。
+**中文**：一个 Chrome Manifest V3 扩展，用来保护 ChatGPT 左侧栏、Chat/Work 切换和 Work 历史目录中的隐私入口，同时不影响当前对话、消息输入框或发送按钮。
 
-**English**: A Chrome Manifest V3 extension that protects ChatGPT sidebar history, pinned chats, projects, library, and search—without affecting the active conversation, message composer, or send button.
+**English**: A Chrome Manifest V3 extension that protects ChatGPT sidebar navigation, the Chat/Work switch, and Work history—without affecting the active conversation, message composer, or send button.
 
 ## 功能亮点 / Highlights
 
@@ -19,7 +19,7 @@
 | PIN 使用 PBKDF2 + 随机 salt 存储 | Stores PIN with PBKDF2 + a random salt |
 | 错误 PIN 多次后进入短暂冷却 | Adds a short cooldown after repeated incorrect PIN attempts |
 | 可手动选择 Auto / 中文 / English | Lets users choose Auto / Chinese / English manually |
-| 可选择隐藏 Search、Library、常用目录、Pinned、Projects、Chats | Lets users choose Search, Library, General navigation, Pinned, Projects, and Chats |
+| 可选择保护 Search、Library、New chat、More、Pinned、Projects、Chats 以及 Chat/Work 与 Work 历史 | Lets users protect Search, Library, New chat, More, Pinned, Projects, Chats, and Chat/Work history |
 | 遮挡玻璃可选择蓝紫、翡翠或玫瑰 | Offers Indigo, Emerald, and Rose mask-glass tints |
 | 可自定义 1–120 分钟的解锁时间 | Lets users choose an unlock time from 1–120 minutes |
 | 可选择仅打开点击项或解锁整个侧边栏 | Unlocks only the clicked item or the entire sidebar |
@@ -44,7 +44,7 @@ flowchart LR
 
 ```text
 ┌──────────── ChatGPT sidebar / 左侧栏 ────────────┐
-│ New chat                         ← remains usable │
+│ New chat / More                 ← PIN protected   │
 │ ─────── 🔒 Sidebar history locked ─────────────── │
 │ Search chats / Library                            │
 │ Pinned chat names / 置顶聊天名                    │
@@ -79,12 +79,12 @@ flowchart LR
    **English**: Turn on **Sidebar protection**.
 4. **中文**：选择语言：**Auto / 中文 / English**。<br>
    **English**: Choose a language: **Auto / 中文 / English**.
-5. **中文**：勾选你想保护的侧边栏区域：Search chats、Library、定时任务/插件/应用、Pinned chats、Projects、Previous chats。<br>
-   **English**: Select the sidebar areas to protect: Search chats, Library, Scheduled/Plugins/Apps, Pinned chats, Projects, and Previous chats.
+5. **中文**：勾选你想保护的区域：Search chats、Library、New chat/More、Pinned chats、Projects、Previous chats，以及 Chat/Work 与 Work 历史。<br>
+   **English**: Select the areas to protect: Search chats, Library, New chat/More, Pinned chats, Projects, Previous chats, and Chat/Work with Work history.
 6. **中文**：设置解锁时间，并选择 **仅打开点击项** 或 **打开全部侧边栏**。<br>
    **English**: Set the unlock time and choose **Clicked item only** or **Entire sidebar**.
-7. **中文**：选择遮挡玻璃颜色：**蓝紫 / 翡翠 / 玫瑰**。颜色只改变遮挡玻璃，不会改变扩展面板。<br>
-   **English**: Choose a mask-glass tint: **Indigo / Emerald / Rose**. The tint changes only the privacy masks, not the popup UI.
+7. **中文**：选择遮挡玻璃颜色：**蓝紫 / 翡翠 / 玫瑰**。颜色会实时改变遮挡玻璃，不需要保存，也不会改变扩展面板。<br>
+   **English**: Choose a mask-glass tint: **Indigo / Emerald / Rose**. The masks update immediately without Save, while the popup UI remains neutral.
 8. **中文**：点击 **保存设置 / Save settings**。<br>
    **English**: Click **Save settings**.
 9. **中文**：刷新 ChatGPT 页面，或在 `chrome://extensions` 里重载扩展后再刷新页面。<br>
@@ -96,8 +96,8 @@ flowchart LR
   **English**: When locked, **🔒 History locked** appears and sidebar history areas are masked.
 - **中文**：遮挡层采用平衡透明度和模糊度的半透明玻璃效果，可选择蓝紫、翡翠或玫瑰。<br>
   **English**: Masks balance translucency and blur and are available in Indigo, Emerald, or Rose.
-- **中文**：点击被保护区域会弹出 PIN 输入框。PIN 正确后，会按设置打开点击项或整个侧边栏，并开始自定义倒计时。<br>
-  **English**: Clicking a protected area opens a PIN dialog. A correct PIN opens the clicked item or the entire sidebar for the configured duration.
+- **中文**：点击被保护区域会弹出 PIN 输入框。在累计模式中，已经打开的项目和聊天会一起保持显示，直到倒计时结束或立即锁定。<br>
+  **English**: Clicking a protected area opens a PIN dialog. In cumulative mode, previously opened Projects and chats remain visible until the timer ends or Lock Now is pressed.
 - **中文**：在“仅打开点击项”模式中，打开一个 Project 会同时显示这个 Project 里的子聊天，但其他 Project 继续锁定。<br>
   **English**: In Clicked item only mode, opening a Project also reveals that Project's child chats while other Projects remain locked.
 - **中文**：Scheduled、Plugins、Apps 等常用目录以及 Pinned、Projects、Chats 标题会显示名称；私人条目只显示“项目”“聊天”或“置顶聊天”等类型，不显示真实标题。<br>

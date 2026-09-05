@@ -1,5 +1,14 @@
 # Changelog / 更新日志
 
+## 1.5.0 — 2026-09-05
+
+- Added PIN protection for New chat, More, the Chat/Work switch, and Work home history entries.
+- Added a separate selectable Chat/Work and Work history protection area.
+- Mask glass colors now update immediately when selected without requiring Save settings.
+- Cached sidebar heading geometry so protection refreshes classify rows in linear time instead of rescanning headings for every row.
+- Uses in-memory Sets for constant-time checks of cumulatively unlocked items and Projects.
+- Removed obsolete packaged release archives while retaining documentation, privacy, localization, and store assets.
+
 ## 1.4.5 — 2026-09-05
 
 - Changed item-only unlocking into a cumulative unlock session.
